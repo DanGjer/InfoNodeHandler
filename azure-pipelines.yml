@@ -8,6 +8,7 @@ parameters:
     type: object
     default:
       - 'Release 2024'
+      - 'Release 2025'
 trigger:
 - main
 

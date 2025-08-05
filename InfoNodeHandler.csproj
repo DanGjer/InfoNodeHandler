@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ExtensionId>InfoNodeHandler</ExtensionId>
     <Authors>DBGJ</Authors>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Title>InfoNodeHandler</Title>
     <Description>A tool for handling subitems in dRofus coming from objects in linked models</Description>
     <PackageTags>Revit;Assistant;Extension</PackageTags>
@@ -14,7 +14,7 @@
     Adjust MainRevitVersion to get IntelliSense for the correct version do a 
     dotnet restore to restore the correct nuget packages for the selected Revit version.
     -->
-    <MainRevitVersion Condition="'$(Configuration)' == 'Debug'">2024</MainRevitVersion>
+    <MainRevitVersion Condition="'$(Configuration)' == 'Debug'">2025</MainRevitVersion>
   </PropertyGroup>
 
   <Import Project=".\Configurations.targets" />
