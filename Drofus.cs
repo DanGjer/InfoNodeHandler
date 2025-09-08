@@ -21,7 +21,7 @@ public class Drofus
             throw new Exception("Server not found");
         }
 
-        string endpoint = $"{server}{db}/{projnumber}/occurrences?$select={AssistantArgs.ParamSubOccID},{AssistantArgs.ParamSubItemNumber},{AssistantArgs.ParamSubItemName},{AssistantArgs.ParamHostOccID},{args.ParamHostOccModelName},{AssistantArgs.ParamHostItemName},{args.ParamHostItemData1},{args.ParamHostItemData2},{AssistantArgs.ParamHostOccTag}&$filter=is_sub_occurrence+in+(true)+and+contains({args.ParamHostOccModelName}%2C%27{modname}%27)";
+        string endpoint = $"{server}{db}/{projnumber}/occurrences?$select={AssistantArgs.ParamSubOccID},{AssistantArgs.ParamSubItemNumber},{AssistantArgs.ParamSubItemName},{AssistantArgs.ParamHostOccID},{args.ParamHostOccModelName},{AssistantArgs.ParamHostItemName},{args.ParamHostItemData1},{args.ParamHostItemData2},{AssistantArgs.ParamHostOccTag}&$filter=is_sub_occurrence eq true and contains({args.ParamHostOccModelName},'{modname}')";
         return endpoint;
     }
     
@@ -77,6 +77,7 @@ public class Drofus
                 
                 var responseText = response.Content.ReadAsStringAsync().Result;
                 Console.WriteLine("API request OK!");
+                Console.WriteLine($"Response content: {responseText}");
                 var options = new JsonSerializerOptions
                 {PropertyNameCaseInsensitive = true};
 

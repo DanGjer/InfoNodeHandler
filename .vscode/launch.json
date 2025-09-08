@@ -5,10 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Attach to Revit",
-            "type": "clr",
+            "name": "Attach to Revit 2025",
+            "type": "coreclr",
             "request": "attach",
             "processName": "Revit",
+            "justMyCode": true,
             "requireExactSource": false
         },
         {

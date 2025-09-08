@@ -26,7 +26,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         foreach (string link in revitLinks)
         {
-            subsInDrofus.AddRange(Drofus.DrofusAPI(document, link));
+            var drofusItems = Drofus.DrofusAPI(document, link);
+            if (drofusItems != null)
+            {
+                subsInDrofus.AddRange(drofusItems);
+            }
         }
 
 
