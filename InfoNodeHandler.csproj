@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="dRofusClient" Version="1.0.11" />
     <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3">
       <PrivateAssets>all</PrivateAssets>
@@ -52,6 +53,11 @@
     <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
     <Private>false</Private>
   </Reference>
+  </ItemGroup>
+
+    <ItemGroup>
+    
+    <PackageReference Include="dRofusClient.Revit.$(MainRevitVersion)" Version="*" />
   </ItemGroup>
 
 

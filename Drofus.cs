@@ -106,33 +106,14 @@ public class Drofus
 
 public class DrofusOccurrence
 {
-    [JsonPropertyName("id")]
     public int SubOccId { get; set; }
-
-    [JsonPropertyName("article_id_number")]
     public string? SubIdNumber { get; set; }
-
-    [JsonPropertyName("article_id_name")]
     public string? SubItemName { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_id")]
     public int HostOccId { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_occurrence_data_17_11_11_10")]
     public string? HostOccModname { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_article_id_name")]
     public string? HostItemName { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_article_id_dyn_article_13101110")]
-    [JsonConverter(typeof(FlexibleStringConverter))]
     public string? HostOccDyn1 { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_article_id_dyn_article_13101211")]
-    [JsonConverter(typeof(FlexibleStringConverter))]
     public string? HostItemDyn2 { get; set; }
-
-    [JsonPropertyName("parent_occurrence_id_classification_number")]
     public string? HostOccTag { get; set; }
 }
 
@@ -145,6 +126,17 @@ public class DrofusHost
     public string? HostOccTag {get; set;}
     public string? HostOccModname {get; set;}
     public List<DrofusOccurrence> SubItems {get; set;} = new();
+}
+
+public class DrofusHost2
+{
+    public int HostOccID { get; set; }
+    public string? HostItemName { get; set; }
+    public string? HostItemData1 { get; set; }
+    public string? HostItemData2 { get; set; }
+    public string? HostOccTag { get; set; }
+    public string? HostOccModname { get; set; }
+    public List<object> SubItems { get; set; } = new();
 }
 
 public class FlexibleStringConverter : JsonConverter<string>
