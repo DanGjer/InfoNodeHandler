@@ -53,26 +53,6 @@ public class Revit
         return modnames;
     }
 
-    public static (string, string, string) GetUserProjectinfo (Document doc)
-    {
-        try
-        {
-        string drofusServer = doc.ProjectInformation.LookupParameter("drofus_server").AsString();
-        string drofusProjNumber = doc.ProjectInformation.LookupParameter("drofus_project_id").AsString();
-        string drofusDatabase = doc.ProjectInformation.LookupParameter("drofus_database").AsString();
-
-        if (!string.IsNullOrEmpty(drofusServer) && !string.IsNullOrEmpty(drofusProjNumber) && !string.IsNullOrEmpty(drofusDatabase))
-                {
-                    return (drofusServer, drofusProjNumber, drofusDatabase);
-                }
-                throw new Exception("One or more Project Information parameters are missing or empty");
-        }
-        catch (Exception ex)
-        {
-            throw new Exception ("Could not retrieve Project Information data from user", ex);
-        }
-    }
-
     public static List<RevitInstance> CollectAllRevitInstances (Document doc)
     {
         var instances = new List<RevitInstance>();
@@ -190,7 +170,7 @@ public class Revit
             return idParam != null && idParam.AsString() == host.DrofusOccurrenceId.ToString();
         });
 
-        string subItemSummary = string.Join(" | ", host.SubItems.Select(s => $"{s.SubOccId},{s.SubItemName}"));
+        string subItemSummary = host.SubItems != null ? string.Join(" | ", host.SubItems.Select(s => $"{s.SubOccId},{s.SubItemName}")) : string.Empty;
 
         
 
@@ -222,6 +202,9 @@ public class Revit
             }
         }
 
+        if (symbol == null)
+            throw new Exception("InfoNode family symbol not found");
+
         if (!symbol.IsActive)
         {
             symbol.Activate();
@@ -248,27 +231,6 @@ public class Revit
             param.Set(value ?? "Ingen data");
         }
 
-    }
-
-    public static bool IsAlreadyPlaced(Document doc, XYZ position, double tolerance = 0.01)
-    {
-    var collector = new FilteredElementCollector(doc)
-        .OfClass(typeof(FamilyInstance))
-        .OfCategory(BuiltInCategory.OST_SpecialityEquipment)
-        .Cast<FamilyInstance>()
-        .Where(f => f.Symbol.Name == "InfoNode");
-
-    foreach (var instance in collector)
-        {
-            var loc = instance.Location as LocationPoint;
-            if (loc == null) continue;
-
-            double distance = loc.Point.DistanceTo(position);
-            if (distance < tolerance)
-                return true;
-        }
-
-    return false;
     }
 
     public static int TheGreatPurge(Document doc, List<ActualRevitHost> validHosts)
