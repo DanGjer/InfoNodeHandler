@@ -29,11 +29,15 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         var client = new dRofusClientFactory().Create(document);
 
-        // Build query with filters: is_sub_occurrence = true AND host model name is in list of active links
+        // Build query with filters: is_sub_occurrence = true AND optionally host model name is in list of active links
         var querySubs = Query.List()
             .Select("Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostItemData1, args.ParamHostItemData2, "parent_occurrence_id_classification_number")
-            .Filter(new FilterItem("is_sub_occurrence", Comparison.Eq, true))
-            .Filter(new FilterItem(args.ParamHostOccModelName, Comparison.In, revitLinks));
+            .Filter(new FilterItem("is_sub_occurrence", Comparison.Eq, true));
+
+        if (!args.IgnoreHostModelName)
+        {
+            querySubs = querySubs.Filter(new FilterItem(args.ParamHostOccModelName, Comparison.In, revitLinks));
+        }
 
         var allOccurrences = client.GetOccurrences(querySubs);
 
@@ -68,6 +72,10 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document);
 
+        // Debug: Export InstancesInRevit to file
+        string debugPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "InstancesInRevit_Debug.txt");
+        System.IO.File.WriteAllLines(debugPath, InstancesInRevit.Select(i => $"OccID: {i.DrofusOccurrenceId}, Position: {i.Position?.X:F2},{i.Position?.Y:F2},{i.Position?.Z:F2}"));
+
         // Clear hosts to avoid using stale data from previous runs
         Revit.ActualRevitHosts.Clear();
 
@@ -93,20 +101,32 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         var activeRevitHosts = Revit.ActualRevitHosts;
 
+        // Debug: Export activeRevitHosts to file
+        string debugPath2 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ActiveRevitHosts_Debug.txt");
+        System.IO.File.WriteAllLines(debugPath2, activeRevitHosts.Select(h => $"OccID: {h.DrofusOccurrenceId}, ItemName: {h.ItemName}, Modname: {h.Modname}, SubItems: {h.SubItems?.Count ?? 0}, Position: {h.Position?.X:F2},{h.Position?.Y:F2},{h.Position?.Z:F2}"));
 
-        using (var tx = new Transaction(document, "Place or update Infonodes"))
+        if (!args.DryRun)
         {
-            tx.Start();
+            using (var tx = new Transaction(document, "Place or update Infonodes"))
+            {
+                tx.Start();
 
+                foreach (var host in activeRevitHosts)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun);
+                }
+
+                tx.Commit();
+            }
+        }
+        else
+        {
             foreach (var host in activeRevitHosts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                Revit.PlaceOrUpdateInfoNode(document, host);
+                Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun);
             }
-
-            tx.Commit();
-
-
         }
         var createdIDs = new List<int>();
         var movedIDs = new List<int>();
@@ -136,7 +156,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             }
         }
         int updatedCount = Revit.ActualRevitHosts.Count(h => h.Status == Revit.ActualHostStatus.Updated);
-        var deletedCount = Revit.TheGreatPurge(document, activeRevitHosts);
+        var deletedCount = Revit.TheGreatPurge(document, activeRevitHosts, args.DryRun);
 
         foreach (var host in Revit.ActualRevitHosts)
         {
@@ -147,8 +167,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             }
         }
 
-        string summarySuccess = ($"Success!\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\n\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\n\nUpdated {updatedCount} Infonodes\n\nDeleted {deletedCount} Infonodes");
-        string summaryPartial = ($"Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move ops for each run\nHere are the suspects: ({String.Join(", ", duplicateIDs)})\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\nUpdated {updatedCount} Infonodes\nDeleted {deletedCount} Infonodes");
+        string dryRunPrefix = args.DryRun ? "[DRY RUN] " : "";
+        string summarySuccess = ($"{dryRunPrefix}Success!\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\n\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\n\nUpdated {updatedCount} Infonodes\n\nDeleted {deletedCount} Infonodes");
+        string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move ops for each run\nHere are the suspects: ({String.Join(", ", duplicateIDs)})\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\nUpdated {updatedCount} Infonodes\nDeleted {deletedCount} Infonodes");
 
         return duplicateIDs.Count > 0
             ? Result.Text.PartiallySucceeded(summaryPartial)

@@ -4,6 +4,11 @@ namespace InfoNode;
 
 public class AssistantArgs
 {
+    [Description("Dry run"), ControlData(ToolTip = "")]
+    public bool DryRun { get; set; } = false;
+    [Description("Ignore host model name"), ControlData(ToolTip = "")]
+    public bool IgnoreHostModelName { get; set; } = false;
+
     [Description("Host occurrence model name"), ControlData(ToolTip = "Sample tooltip")]
     public string ParamHostOccModelName { get; set; } = "parent_occurrence_id_occurrence_data_17_11_11_10";
 

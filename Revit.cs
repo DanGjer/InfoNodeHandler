@@ -151,7 +151,7 @@ public class Revit
         Created
     }
 
-    public static void PlaceOrUpdateInfoNode(Document doc, ActualRevitHost host)
+    public static void PlaceOrUpdateInfoNode(Document doc, ActualRevitHost host, bool dryRun = false)
     {
         double tolerance = 0.01;
         var symbol = new FilteredElementCollector(doc)
@@ -183,21 +183,27 @@ public class Revit
 
                 if (!isSamePosition)
                 {
-                    XYZ moveVector = host.Position - location.Point;
-                    ElementTransformUtils.MoveElement(doc, existingInstance.Id, moveVector);
+                    if (!dryRun)
+                    {
+                        XYZ moveVector = host.Position - location.Point;
+                        ElementTransformUtils.MoveElement(doc, existingInstance.Id, moveVector);
+                    }
                     host.Status = ActualHostStatus.Moved;
                 }
                 else
                 {
                     host.Status = ActualHostStatus.Updated;
                 }
-                SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
-                SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
+                if (!dryRun)
+                {
+                    SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
+                }
                 return;
             }
         }
@@ -205,20 +211,23 @@ public class Revit
         if (symbol == null)
             throw new Exception("InfoNode family symbol not found");
 
-        if (!symbol.IsActive)
+        if (!dryRun)
         {
-            symbol.Activate();
-            doc.Regenerate();
-        }
+            if (!symbol.IsActive)
+            {
+                symbol.Activate();
+                doc.Regenerate();
+            }
 
-        var newInstance = doc.Create.NewFamilyInstance(host.Position, symbol, StructuralType.NonStructural);
-        SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
-        SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
+            var newInstance = doc.Create.NewFamilyInstance(host.Position, symbol, StructuralType.NonStructural);
+            SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
+        }
 
         host.Status = ActualHostStatus.Created;
     }
@@ -233,7 +242,7 @@ public class Revit
 
     }
 
-    public static int TheGreatPurge(Document doc, List<ActualRevitHost> validHosts)
+    public static int TheGreatPurge(Document doc, List<ActualRevitHost> validHosts, bool dryRun = false)
     {
         var validIDs = new HashSet<string>(validHosts.Select(h => h.DrofusOccurrenceId.ToString()));
 
@@ -263,26 +272,29 @@ public class Revit
             }
         }
 
-        int deletedCount = 0;
+        int deletedCount = toDelete.Count;
 
-        using (var tx2 = new Transaction(doc, "The Great Purge"))
+        if (!dryRun)
         {
-            tx2.Start();
-
-            foreach (var id in toDelete)
+            using (var tx2 = new Transaction(doc, "The Great Purge"))
             {
-                try
-                {
-                    doc.Delete(id);
-                    deletedCount++;
-                }
-                catch (Exception ex)
-                {
-                    Result.Text.Failed($"Failed to delete InfoNodes that were marked for deletion: {ex}");
-                }
-            }
+                tx2.Start();
 
-            tx2.Commit();
+                foreach (var id in toDelete)
+                {
+                    try
+                    {
+                        doc.Delete(id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Result.Text.Failed($"Failed to delete InfoNodes that were marked for deletion: {ex}");
+                        deletedCount--;
+                    }
+                }
+
+                tx2.Commit();
+            }
         }
 
         return deletedCount;
