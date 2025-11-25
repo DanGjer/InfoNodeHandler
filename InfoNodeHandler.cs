@@ -72,10 +72,6 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document);
 
-        // Debug: Export InstancesInRevit to file
-        string debugPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "InstancesInRevit_Debug.txt");
-        System.IO.File.WriteAllLines(debugPath, InstancesInRevit.Select(i => $"OccID: {i.DrofusOccurrenceId}, Position: {i.Position?.X:F2},{i.Position?.Y:F2},{i.Position?.Z:F2}"));
-
         // Clear hosts to avoid using stale data from previous runs
         Revit.ActualRevitHosts.Clear();
 
@@ -100,10 +96,6 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         }
 
         var activeRevitHosts = Revit.ActualRevitHosts;
-
-        // Debug: Export activeRevitHosts to file
-        string debugPath2 = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ActiveRevitHosts_Debug.txt");
-        System.IO.File.WriteAllLines(debugPath2, activeRevitHosts.Select(h => $"OccID: {h.DrofusOccurrenceId}, ItemName: {h.ItemName}, Modname: {h.Modname}, SubItems: {h.SubItems?.Count ?? 0}, Position: {h.Position?.X:F2},{h.Position?.Y:F2},{h.Position?.Z:F2}"));
 
         if (!args.DryRun)
         {
