@@ -52,7 +52,7 @@
 
     <ItemGroup>
     
-    <PackageReference Include="dRofusClient.Revit.$(MainRevitVersion)" Version="*" />
+    <PackageReference Include="dRofusClient.Revit.$(MainRevitVersion)" Version="1.0.11" />
   </ItemGroup>
 
 
