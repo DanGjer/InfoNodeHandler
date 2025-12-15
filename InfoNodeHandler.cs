@@ -106,7 +106,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 foreach (var host in activeRevitHosts)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun);
+                    Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
                 }
 
                 tx.Commit();
@@ -117,7 +117,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             foreach (var host in activeRevitHosts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun);
+                Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
             }
         }
         var createdIDs = new List<int>();

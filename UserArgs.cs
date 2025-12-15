@@ -18,7 +18,13 @@ public class AssistantArgs
     [Description("Host item data 2"), ControlData(ToolTip = "Sample tooltip")]
     public string ParamHostItemData2 { get; set; } = "parent_occurrence_id_article_id_dyn_article_13101211";
 
-    internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
+    [Description("Select a phase for the infonodes"), ControlData(ToolTip = "Select the phase for InfoNode placement")]
+    [RevitAutoFill(RevitAutoFillSource.Phases)]
+    public string? RevitPhases { get; set; }
 
-    
+    [Description("Select a workset for the infonodes"), ControlData(ToolTip = "Select the workset for InfoNode placement")]
+    [RevitAutoFill(RevitAutoFillSource.Worksets)]
+    public string? RevitWorkset { get; set; }
+
+    internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
 }

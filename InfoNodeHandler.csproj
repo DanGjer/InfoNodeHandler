@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ExtensionId>InfoNodeHandler</ExtensionId>
     <Authors>DBGJ</Authors>
-    <Version>0.1.4</Version>
+    <Version>0.1.5</Version>
     <Title>InfoNodeHandler</Title>
     <Description>A tool for handling subitems in dRofus coming from objects in linked models</Description>
     <PackageTags>Revit;Assistant;Extension</PackageTags>

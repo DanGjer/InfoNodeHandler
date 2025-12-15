@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB.Structure;
+using Autodesk.Revit.DB;
 namespace InfoNode;
 
 
@@ -151,7 +152,7 @@ public class Revit
         Created
     }
 
-    public static void PlaceOrUpdateInfoNode(Document doc, ActualRevitHost host, bool dryRun = false)
+    public static void PlaceOrUpdateInfoNode(Document doc, ActualRevitHost host, bool dryRun = false, string? phaseName = null, string? worksetName = null)
     {
         double tolerance = 0.01;
         var symbol = new FilteredElementCollector(doc)
@@ -203,6 +204,33 @@ public class Revit
                     SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
                     SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
                     SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
+                    
+                    // Update phase if specified
+                    if (!string.IsNullOrWhiteSpace(phaseName))
+                    {
+                        var targetPhase = doc.Phases.Cast<Phase>().FirstOrDefault(p => p.Name == phaseName);
+                        if (targetPhase != null && existingInstance.CreatedPhaseId != targetPhase.Id)
+                        {
+                            existingInstance.CreatedPhaseId = targetPhase.Id;
+                        }
+                    }
+                    
+                    // Update workset if specified and worksets are enabled
+                    if (!string.IsNullOrWhiteSpace(worksetName) && doc.IsWorkshared)
+                    {
+                        var targetWorkset = new FilteredWorksetCollector(doc)
+                            .OfKind(WorksetKind.UserWorkset)
+                            .FirstOrDefault(w => w.Name == worksetName);
+                        if (targetWorkset != null)
+                        {
+                            var worksetId = targetWorkset.Id;
+                            var param = existingInstance.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM);
+                            if (param != null && !param.IsReadOnly)
+                            {
+                                param.Set(worksetId.IntegerValue);
+                            }
+                        }
+                    }
                 }
                 return;
             }
@@ -227,6 +255,33 @@ public class Revit
             SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
             SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
             SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
+            
+            // Set phase if specified
+            if (!string.IsNullOrWhiteSpace(phaseName) && phaseName != "[]")
+            {
+                var targetPhase = doc.Phases.Cast<Phase>().FirstOrDefault(p => p.Name == phaseName);
+                if (targetPhase != null)
+                {
+                    newInstance.CreatedPhaseId = targetPhase.Id;
+                }
+            }
+            
+            // Set workset if specified and worksets are enabled
+            if (!string.IsNullOrWhiteSpace(worksetName) && worksetName != "[]" && doc.IsWorkshared)
+            {
+                var targetWorkset = new FilteredWorksetCollector(doc)
+                    .OfKind(WorksetKind.UserWorkset)
+                    .FirstOrDefault(w => w.Name == worksetName);
+                if (targetWorkset != null)
+                {
+                    var worksetId = targetWorkset.Id;
+                    var param = newInstance.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM);
+                    if (param != null && !param.IsReadOnly)
+                    {
+                        param.Set(worksetId.IntegerValue);
+                    }
+                }
+            }
         }
 
         host.Status = ActualHostStatus.Created;
