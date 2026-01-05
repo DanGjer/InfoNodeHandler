@@ -13,8 +13,26 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         if (document is null)
             return Result.Text.Failed("Revit has no active model open");
 
-        if (Requirements.FamilyChecker(document) == false)
-            return Result.Text.Failed("Required InfoNode family does not exist in the model!");
+        bool pathcheckerResult = Requirements.PathChecker();
+        if (!pathcheckerResult)
+        {
+            return Result.Text.Failed("Paths to required InfoNode family or shared parameter file not found.");
+        }
+
+        if (!Requirements.FamilyChecker(document))
+        {
+            if (!Requirements.FamilyImporter(document, out var importError))
+            {
+                var reason = string.IsNullOrWhiteSpace(importError)
+                    ? "Required InfoNode family could not be loaded into the model."
+                    : $"Required InfoNode family could not be loaded into the model: {importError}";
+
+                return Result.Text.Failed(reason);
+            }
+
+            if (!Requirements.FamilyChecker(document))
+                return Result.Text.Failed("Required InfoNode family does not exist in the model after attempted import.");
+        }
 
         string parameterCheckerResult = Requirements.ParameterChecker(document);
         if (!string.IsNullOrEmpty(parameterCheckerResult))

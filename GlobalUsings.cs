@@ -22,6 +22,7 @@ global using CW.Assistant.Extensions.Revit.Attributes;
 global using CW.Assistant.Extensions.Revit.Collectors;
 
 global using Autodesk.Revit.DB;
+global using Autodesk.Revit.DB.Structure;
 global using Autodesk.Revit.UI;
 
 global using dRofusClient;

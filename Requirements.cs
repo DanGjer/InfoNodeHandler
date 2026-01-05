@@ -2,6 +2,105 @@ namespace InfoNode;
 
 public class Requirements
 {
+    private const string InfoNodeFamilyPath = @"O:\A005000\A008170\EL\Utvikling\dRofusSubs_RETIRED\InfoNode.rfa";
+    private const string InfoNodeSharedParamPath = @"O:\A005000\A008170\EL\Utvikling\dRofusSubs_RETIRED\Shared params.txt";
+
+    public static bool PathChecker()
+    {
+        return System.IO.File.Exists(InfoNodeFamilyPath) && System.IO.File.Exists(InfoNodeSharedParamPath);
+    }
+
+    public static bool FamilyImporter(Document doc, out string? error)
+    {
+        error = null;
+
+        if (!System.IO.File.Exists(InfoNodeFamilyPath))
+        {
+            error = $"InfoNode family file not found at {InfoNodeFamilyPath}";
+            return false;
+        }
+
+        using (var tx = new Transaction(doc, "Load InfoNode family"))
+        {
+            tx.Start();
+
+            try
+            {
+                if (doc.LoadFamily(InfoNodeFamilyPath, out var family) && family != null)
+                {
+                    tx.Commit();
+                    return true;
+                }
+
+                tx.RollBack();
+                error = "Revit returned false while loading the InfoNode family.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (tx.GetStatus() == TransactionStatus.Started)
+                    tx.RollBack();
+
+                error = $"Exception while loading InfoNode family: {ex.Message}";
+                return false;
+            }
+        }
+    }
+
+    public static void ParameterImporter(Document doc)
+    {
+        // Capture the current shared parameter file path from Revit (robust: use DefinitionFile when available)
+        var app = doc.Application;
+        if (app == null)
+            return;
+
+        var sharedParamDefFile = app.OpenSharedParameterFile();
+        string currentSharedParamFilePath = sharedParamDefFile?.Filename ?? string.Empty;
+
+        // Verify the InfoNode shared param file exists before attempting to use it
+        if (!System.IO.File.Exists(InfoNodeSharedParamPath))
+            return;
+
+        // Set the shared parameter file to the InfoNode shared parameters file
+        app.SharedParametersFilename = InfoNodeSharedParamPath;
+
+        // Open the shared parameter file and bind all parameters to the document
+        try
+        {
+            var infoNodeParamDefFile = app.OpenSharedParameterFile();
+            if (infoNodeParamDefFile == null)
+            {
+                return;
+            }
+
+            // Create a category set for binding (OST_SpecialityEquipment is where InfoNode instances live)
+            var categorySet = new CategorySet();
+            categorySet.Insert(doc.Settings.Categories.get_Item(BuiltInCategory.OST_SpecialityEquipment));
+
+            // Iterate through all groups and parameters in the shared parameter file
+            foreach (DefinitionGroup group in infoNodeParamDefFile.Groups)
+            {
+                foreach (Definition paramDef in group.Definitions)
+                {
+                    // Check if parameter is already bound
+                    if (doc.ParameterBindings.Contains(paramDef))
+                        continue;
+
+                    // Create an instance binding and insert the parameter into the document
+                    var instanceBinding = app.Create.NewInstanceBinding(categorySet);
+                    doc.ParameterBindings.Insert(paramDef, instanceBinding);
+                }
+            }
+
+            // Restore the original shared parameter file path
+            if (!string.IsNullOrWhiteSpace(currentSharedParamFilePath))
+                app.SharedParametersFilename = currentSharedParamFilePath;
+        }
+        catch (Exception)
+        {
+            // Log or handle import failure silently; ParameterChecker will detect if params still missing
+        }
+    }
     public static bool FamilyChecker(Document doc)
     {
         return new FilteredElementCollector(doc).OfClass(typeof(Family)).Cast<Family>().Any(f => f.Name == "InfoNode");
@@ -10,11 +109,6 @@ public class Requirements
 
     public static string ParameterChecker(Document doc)
     {
-        var element = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_SpecialityEquipment).WhereElementIsNotElementType().FirstElement();
-
-        if (element == null)
-            return "InfoNode family not found";
-
         string[] paramNames = {
             "InfoNode_hostdata",
             "InfoNode_hostID",
@@ -25,13 +119,70 @@ public class Requirements
             "InfoNode_hostdata2"
         };
 
-        var missing = paramNames.Where(name => element.LookupParameter(name) == null).ToList();
+            // Get the InfoNode family
+            var infoNodeFamily = new FilteredElementCollector(doc)
+                .OfClass(typeof(Family))
+                .Cast<Family>()
+                .FirstOrDefault(f => f.Name == "InfoNode");
 
-        if (missing.Any())
-            return string.Join(", ", missing);
+            if (infoNodeFamily == null)
+                return "InfoNode family not found";
 
-        return "";
+            using (var tx = new Transaction(doc, "Check InfoNode parameters"))
+            {
+                tx.Start();
 
+                try
+                {
+                    // Get a default family symbol
+                    var symbol = infoNodeFamily.GetFamilySymbolIds()
+                        .Select(id => doc.GetElement(id))
+                        .OfType<FamilySymbol>()
+                        .FirstOrDefault();
+
+                    if (symbol == null)
+                    {
+                        tx.RollBack();
+                        return "No family symbol found in InfoNode family";
+                    }
+
+                    if (!symbol.IsActive)
+                        symbol.Activate();
+
+                    // Place temporary instance at a high Z coordinate (1000 feet up, well out of the way)
+                    var tempPoint = new XYZ(0, 0, 1000);
+                    var tempInstance = doc.Create.NewFamilyInstance(tempPoint, symbol, StructuralType.NonStructural);
+
+                    // Check for required parameters
+                    var missing = paramNames.Where(name => tempInstance.LookupParameter(name) == null).ToList();
+
+                    if (missing.Any())
+                    {
+                        // Attempt to import missing parameters, then re-check
+                        ParameterImporter(doc);
+
+                        // Re-check against the temporary instance after import
+                        missing = paramNames.Where(name => tempInstance.LookupParameter(name) == null).ToList();
+                    }
+
+                    // Delete the temporary instance
+                    doc.Delete(tempInstance.Id);
+
+                    tx.Commit();
+
+                    if (missing.Any())
+                        return string.Join(", ", missing);
+
+                    return "";
+                }
+                catch (Exception ex)
+                {
+                    if (tx.GetStatus() == TransactionStatus.Started)
+                        tx.RollBack();
+
+                    return $"Error checking parameters: {ex.Message}";
+                }
+            }
     }
 
     public static string ModelChecker(Document doc)
