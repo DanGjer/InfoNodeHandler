@@ -187,7 +187,7 @@ public class Requirements
 
     public static string ModelChecker(Document doc)
     {
-        // 1. Collect all loaded link model names from "model_name_drofus"
+        // 1. Collect all loaded link model names from "model_name_drofus" and file names (for IFCs)
         var loadedModelNames = new List<string>();
         var linkInstances = new FilteredElementCollector(doc)
             .OfClass(typeof(RevitLinkInstance))
@@ -205,6 +205,22 @@ public class Requirements
             if (param != null && param.HasValue && !string.IsNullOrWhiteSpace(param.AsString()))
             {
                 loadedModelNames.Add(param.AsString());
+            }
+            else
+            {
+                // Fallback: use file name without extension for IFCs and other documents without model_name_drofus
+                var docTitle = linkedDoc.Title;
+                string fileName = null;
+                if (docTitle.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
+                    docTitle.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
+                {
+                    fileName = docTitle.Substring(0, docTitle.Length - 4);
+                }
+                else
+                {
+                    fileName = docTitle;
+                }
+                loadedModelNames.Add(fileName);
             }
         }
 

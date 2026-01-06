@@ -2,16 +2,20 @@
   "Version": 4,
   "ActionConfigs": [
     {
-      "Id": "23658526-030d-4f95-8787-c95cd353eddb",
+      "Id": "0d8865b1-45c6-4cb9-9fc1-1006159c0da3",
       "IsChecked": true,
       "Name": "Revit extension",
       "Tasks": [
         {
           "TaskTypeId": "21160144-4eb3-43dd-8200-1ce7ae58e221",
           "Input": {
-            "ParamHostOccModelName": "parent_occurrence_id_occurrence_data_24_10_10_10",
-            "ParamHostItemData1": "parent_occurrence_id_article_id_dyn_article_13101211",
-            "ParamHostItemData2": "parent_occurrence_id_article_id_dyn_article_13101110"
+            "DryRun": "False",
+            "ParamHostOccModelName": "parent_occurrence_id_occurrence_data_17_11_11_10",
+            "ParamHostItemData1": "parent_occurrence_id_article_id_dyn_article_13101110",
+            "ParamHostItemData2": "parent_occurrence_id_article_id_dyn_article_13101211",
+            "RevitPhases": "New Construction",
+            "RevitWorkset": "xx_RIE_Infonoder",
+            "OccurrenceIdParameterNames": "[\"FOB_Database_ID.Forekomst_ID\",\"drofus_occurrence_id\"]"
           },
           "Output": null,
           "BrowserMode": 2,
@@ -21,7 +25,7 @@
           "Develop": {
             "ProjectPath": "C:\\C#\\InfoNodeHandler\\InfoNodeHandler.csproj"
           },
-          "Id": "de12f8c4-c1fe-48b2-9d37-9cc9f6f68e60",
+          "Id": "a16c91b5-edca-4d0f-995f-9fcd3bed7807",
           "Disabled": false,
           "GeneratedName": "InfoNodeHandler",
           "UserDefinedName": null,
@@ -31,7 +35,7 @@
           "Logins": []
         }
       ],
-      "GroupId": "1c206949-3c14-4928-8ec0-18d69ba99b7a",
+      "GroupId": "63684952-5921-4970-8124-e4c8e103c9a5",
       "Variables": [],
       "Retires": 0
     }
@@ -41,7 +45,7 @@
   },
   "ActionGroups": [
     {
-      "Id": "1c206949-3c14-4928-8ec0-18d69ba99b7a",
+      "Id": "63684952-5921-4970-8124-e4c8e103c9a5",
       "Name": "Group 1",
       "Variables": []
     }

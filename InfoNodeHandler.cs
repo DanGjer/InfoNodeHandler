@@ -47,15 +47,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
         var client = new dRofusClientFactory().Create(document);
 
-        // Build query with filters: is_sub_occurrence = true AND optionally host model name is in list of active links
+        // Build query with filters: is_sub_occurrence = true
+        // Note: We no longer filter by host model name because IFC-imported elements won't have a model name in dRofus
         var querySubs = Query.List()
             .Select("Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostItemData1, args.ParamHostItemData2, "parent_occurrence_id_classification_number")
             .Filter(new FilterItem("is_sub_occurrence", Comparison.Eq, true));
-
-        if (!args.IgnoreHostModelName)
-        {
-            querySubs = querySubs.Filter(new FilterItem(args.ParamHostOccModelName, Comparison.In, revitLinks));
-        }
 
         var allOccurrences = client.GetOccurrences(querySubs);
 
@@ -82,13 +78,12 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             HostItemData2 = group.First().HostItemDyn2?.ToString(),
             HostOccTag = group.First().HostOccTag,
             HostOccModname = group.First().HostOccModname?.ToString(),
+            RevitModname = group.First().RevitModname,
             SubItems = group.ToList()
         }).ToList();
 
 
-
-
-        var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document);
+var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames);
 
         // Clear hosts to avoid using stale data from previous runs
         Revit.ActualRevitHosts.Clear();
@@ -97,8 +92,12 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         {
             int occurrenceId = instance.DrofusOccurrenceId;
             var matchingHost = hostsInDrofus.FirstOrDefault(h => h.HostOccID == occurrenceId);
+            
             if (matchingHost != null)
             {
+                // Set RevitModname from the instance so it can be used as fallback if dRofus modname is empty
+                matchingHost.RevitModname = instance.RevitModname;
+                
                 Revit.ActualRevitHosts.Add(new Revit.ActualRevitHost
                 {
                     DrofusOccurrenceId = instance.DrofusOccurrenceId,
@@ -107,7 +106,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     ItemData1 = matchingHost.HostItemData1,
                     ItemData2 = matchingHost.HostItemData2,
                     Tag = matchingHost.HostOccTag,
-                    Modname = matchingHost.HostOccModname,
+                    Modname = string.IsNullOrWhiteSpace(matchingHost.HostOccModname) ? matchingHost.RevitModname : matchingHost.HostOccModname,
                     SubItems = matchingHost.SubItems,
                 });
             }

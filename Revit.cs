@@ -54,49 +54,136 @@ public class Revit
         return modnames;
     }
 
-    public static List<RevitInstance> CollectAllRevitInstances (Document doc)
+    public static List<RevitInstance> CollectAllRevitInstances(Document doc, List<string> occurrenceIdParameterNames, string? revitModname = null, Transform? linkTransform = null)
     {
         var instances = new List<RevitInstance>();
 
-        var elements = new FilteredElementCollector(doc).WhereElementIsNotElementType().OfClass(typeof(FamilyInstance)).ToElements();
+        // Detect IFC by title containing .ifc
+        bool isIfcDoc = doc.Title.IndexOf(".ifc", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        // Collect parametric elements first (FamilyInstance + GenericForm)
+        var familyInstances = new FilteredElementCollector(doc).WhereElementIsNotElementType().OfClass(typeof(FamilyInstance)).ToElements();
+        var genericForms = new FilteredElementCollector(doc).WhereElementIsNotElementType().OfClass(typeof(GenericForm)).ToElements();
+        var allElements = familyInstances.Cast<Element>().Concat(genericForms.Cast<Element>()).ToList();
+
+        // IFC documents: always include DirectShapes in addition to any parametric elements
+        if (isIfcDoc)
+        {
+            var directShapes = new FilteredElementCollector(doc).WhereElementIsNotElementType().OfClass(typeof(DirectShape)).ToElements();
+            allElements.AddRange(directShapes.Cast<Element>());
+        }
+        else if (allElements.Count == 0)
+        {
+            // Non-IFC: fallback to DirectShape only if nothing parametric was found
+            var directShapes = new FilteredElementCollector(doc).WhereElementIsNotElementType().OfClass(typeof(DirectShape)).ToElements();
+            allElements = directShapes.Cast<Element>().ToList();
+        }
+
+        var elements = allElements;
 
         foreach (var element in elements)
         {
-            var param = element.LookupParameter("drofus_occurrence_id");
-            if (param == null || !param.HasValue)
+            int occId = 0;
+            bool found = false;
+            
+            // Try each parameter name in the list
+            foreach (var paramName in occurrenceIdParameterNames)
+            {
+                var param = element.LookupParameter(paramName);
+                
+                // If LookupParameter fails, try finding it in the Parameters collection directly
+                // This is necessary for linked IFC documents where ParameterBindings may not align
+                if (param == null)
+                {
+                    foreach (Parameter p in element.Parameters)
+                    {
+                        if (p.Definition.Name == paramName)
+                        {
+                            param = p;
+                            break;
+                        }
+                    }
+                }
+                
+                if (param == null || !param.HasValue)
+                    continue;
+
+                if (param.StorageType == StorageType.Integer)
+                {
+                    occId = param.AsInteger();
+                    found = true;
+                    break;
+                }
+                else if (param.StorageType == StorageType.String)
+                {
+                    var strValue = param.AsString();
+                    if (int.TryParse(strValue, out occId))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found)
                 continue;
             
-            int occId;
-
-            if (param.StorageType == StorageType.Integer)
-            {
-                occId = param.AsInteger();
-            }
-            else if (param.StorageType == StorageType.String)
-            {
-                if (!int.TryParse(param.AsString(), out occId))
-                    continue;
-            }
-            else
-                continue;
-
             LocationPoint? location = element.Location as LocationPoint;
             if (location == null)
+            {
+                // For DirectShapes and geometry-based elements without LocationPoint,
+                // try to get the center of the bounding box instead
+                if (element is DirectShape)
+                {
+                    try
+                    {
+                        var boundingBox = element.get_BoundingBox(null);
+                        if (boundingBox != null && boundingBox.Enabled)
+                        {
+                            var minPoint = boundingBox.Min;
+                            var maxPoint = boundingBox.Max;
+                            var center = new XYZ(
+                                (minPoint.X + maxPoint.X) / 2,
+                                (minPoint.Y + maxPoint.Y) / 2,
+                                (minPoint.Z + maxPoint.Z) / 2
+                            );
+                            
+                            // Apply link transform if this is a linked document
+                            if (linkTransform != null)
+                            {
+                                center = linkTransform.OfPoint(center);
+                            }
+                            
+                            instances.Add(new RevitInstance
+                            {
+                                DrofusOccurrenceId = occId,
+                                Position = center,
+                                RevitModname = revitModname
+                            });
+                            continue;
+                        }
+                    }
+                    catch { }
+                }
+                
                 continue;
+            }
 
             instances.Add(new RevitInstance
             {
                 DrofusOccurrenceId = occId,
-                Position = location.Point
+                Position = location.Point,
+                RevitModname = revitModname
             });
         }
         return instances;
     }
 
-    public static List<RevitInstance> CollectAllInstancesFromLinkedModels (Document doc)
+    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames)
     {
         var allInstances = new List<RevitInstance>();
 
+        // Only process linked documents, not the main document
         var linkInstances = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>();
 
         foreach (var linkInstance in linkInstances)
@@ -106,18 +193,33 @@ public class Revit
                 continue;
 
             ProjectInfo projectInfo = doclink.ProjectInformation;
-            if (projectInfo == null)
-                continue;
             
+            // Try to get model_name_drofus parameter from Project Information
+            string? modelName = null;
             var modelNameParam = projectInfo.LookupParameter("model_name_drofus");
-            if (modelNameParam == null)
-                continue;
+            if (modelNameParam != null && modelNameParam.HasValue)
+            {
+                modelName = modelNameParam.AsString();
+            }
             
-            string modelName = modelNameParam.AsString();
+            // If no model_name_drofus parameter or it's empty, use the Revit file name (for IFCs)
             if (string.IsNullOrWhiteSpace(modelName))
-                continue;
+            {
+                var docTitle = doclink.Title;
+                // Remove .rvt or .ifc extension if present
+                if (docTitle.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
+                    docTitle.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
+                {
+                    modelName = docTitle.Substring(0, docTitle.Length - 4);
+                }
+                else
+                {
+                    modelName = docTitle;
+                }
+            }
 
-            var occIds = CollectAllRevitInstances(doclink);
+            var linkTransform = linkInstance.GetTransform();
+            var occIds = CollectAllRevitInstances(doclink, occurrenceIdParameterNames, modelName, linkTransform);
             allInstances.AddRange(occIds);
         }
         return allInstances;
@@ -127,6 +229,7 @@ public class Revit
     {
         public int DrofusOccurrenceId {get; set;}
         public XYZ? Position {get; set;}
+        public string? RevitModname {get; set;}
     }
 
     public class ActualRevitHost

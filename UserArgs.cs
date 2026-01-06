@@ -6,8 +6,6 @@ public class AssistantArgs
 {
     [Description("Dry run"), ControlData(ToolTip = "")]
     public bool DryRun { get; set; } = false;
-    [Description("Ignore host model name"), ControlData(ToolTip = "")]
-    public bool IgnoreHostModelName { get; set; } = false;
 
     [Description("Host occurrence model name"), ControlData(ToolTip = "Sample tooltip")]
     public string ParamHostOccModelName { get; set; } = "parent_occurrence_id_occurrence_data_17_11_11_10";
@@ -27,4 +25,12 @@ public class AssistantArgs
     public string? RevitWorkset { get; set; }
 
     internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
+
+    [Description("Occurrence ID Parameter Names")]
+    [ControlSettings("CompactMode", "true")]
+    [ControlSettings("MaxHeight", "150")]
+    public List<string> OccurrenceIdParameterNames { get; set; } = new List<string> 
+    { 
+        "FOB_Database_ID.Forekomst_ID"
+    };
 }
