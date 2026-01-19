@@ -1,0 +1,58 @@
+{
+  "Version": 4,
+  "ActionConfigs": [
+    {
+      "Id": "0d8865b1-45c6-4cb9-9fc1-1006159c0da3",
+      "IsChecked": true,
+      "Name": "Revit extension",
+      "Tasks": [
+        {
+          "TaskTypeId": "21160144-4eb3-43dd-8200-1ce7ae58e221",
+          "Input": {
+            "DryRun": "True",
+            "ParamHostOccModelName": "parent_occurrence_id_occurrence_data_01_01_01_01",
+            "ParamHostItemData1": "parent_occurrence_id_article_id_dyn_article_34121011",
+            "ParamHostItemData2": "parent_occurrence_id_article_id_dyn_article_34121210",
+            "RevitPhases": "New Construction",
+            "RevitWorkset": "RIE_InfoNodes",
+            "OccurrenceIdParameterNames": "[\"drofus_occurrence_id\"]"
+          },
+          "Output": null,
+          "BrowserMode": 2,
+          "UseNugetBrowser": false,
+          "Package": null,
+          "AssemblyPath": null,
+          "Develop": {
+            "ProjectPath": "C:\\C#\\InfoNodeHandler\\InfoNodeHandler.csproj"
+          },
+          "Id": "a16c91b5-edca-4d0f-995f-9fcd3bed7807",
+          "Disabled": false,
+          "GeneratedName": "InfoNodeHandler",
+          "UserDefinedName": null,
+          "Condition": 0,
+          "TreatErrorsAsWarnings": false,
+          "Timeout": null,
+          "Logins": []
+        }
+      ],
+      "GroupId": "63684952-5921-4970-8124-e4c8e103c9a5",
+      "Variables": [],
+      "Retires": 0
+    }
+  ],
+  "SchedulingConfig": {
+    "Schedules": []
+  },
+  "ActionGroups": [
+    {
+      "Id": "63684952-5921-4970-8124-e4c8e103c9a5",
+      "Name": "Group 1",
+      "Variables": []
+    }
+  ],
+  "Variables": [],
+  "Settings": {
+    "LogActionRuns": false
+  },
+  "RequiredLogins": []
+}
