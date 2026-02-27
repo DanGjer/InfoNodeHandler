@@ -42,9 +42,6 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         if (!string.IsNullOrEmpty(modelCheckerResult))
             return Result.Text.Failed($"One or more relevant links not loaded:\n{modelCheckerResult}");
 
-
-        var revitLinks = Revit.GetRevitLinks(document);
-
         var client = new dRofusClientFactory().Create(document);
 
         // Build query with filters: is_sub_occurrence = true
