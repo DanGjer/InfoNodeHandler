@@ -135,8 +135,11 @@ var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.
             }
         }
         var createdIDs = new List<int>();
+        var createdNames = new List<string>();
         var movedIDs = new List<int>();
+        var movedNames = new List<string>();
         var duplicateIDs = new List<int>();
+        var duplicateNames = new List<string>();
         var seenIds = new HashSet<int>();
 
         int createdCount = Revit.ActualRevitHosts.Count(h => h.Status == Revit.ActualHostStatus.Created);
@@ -147,6 +150,7 @@ var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.
                 if (host.Status == Revit.ActualHostStatus.Created)
                 {
                     createdIDs.Add(host.DrofusOccurrenceId);
+                    createdNames.Add(host.ItemName ?? string.Empty);
                 }
             }
         }
@@ -158,6 +162,7 @@ var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.
                 if (host.Status == Revit.ActualHostStatus.Moved && !movedIDs.Contains(host.DrofusOccurrenceId))
                 {
                     movedIDs.Add(host.DrofusOccurrenceId);
+                    movedNames.Add(host.ItemName ?? string.Empty);
                 }
             }
         }
@@ -170,12 +175,14 @@ var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.
             {
                 if (!duplicateIDs.Contains(host.DrofusOccurrenceId))
                     duplicateIDs.Add(host.DrofusOccurrenceId);
+                if (!duplicateNames.Contains(host.ItemName ?? string.Empty))
+                    duplicateNames.Add(host.ItemName ?? string.Empty);
             }
         }
 
-        string dryRunPrefix = args.DryRun ? "[DRY RUN] " : "";
-        string summarySuccess = ($"{dryRunPrefix}Success!\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\n\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\n\nUpdated {updatedCount} Infonodes\n\nDeleted {deletedCount} Infonodes");
-        string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move ops for each run\nHere are the suspects: ({String.Join(", ", duplicateIDs)})\n\nCreated {createdCount} Infonodes for these hosts: ({String.Join(", ", createdIDs)})\nMoved {movedCount} Infonodes for these hosts: ({String.Join(", ", movedIDs)})\nUpdated {updatedCount} Infonodes\nDeleted {deletedCount} Infonodes");
+        string dryRunPrefix = args.DryRun ? "[DRY RUN]\n " : "";
+        string summarySuccess = ($"{dryRunPrefix}Success!\n\nCreated {createdCount} Infonodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} Infonodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} Infonodes\n\nDeleted {deletedCount} Infonodes");
+        string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move ops for each run\nDuplicate IDs: \n({String.Join(", ", duplicateIDs)})\nDuplicate names: \n({String.Join(", ", duplicateNames)})\n\nCreated {createdCount} Infonodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} Infonodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} Infonodes\nDeleted {deletedCount} Infonodes");
 
         return duplicateIDs.Count > 0
             ? Result.Text.PartiallySucceeded(summaryPartial)
