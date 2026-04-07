@@ -38,7 +38,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         if (!string.IsNullOrEmpty(parameterCheckerResult))
             return Result.Text.Failed($"One or more required parameters missing from the project:\n{parameterCheckerResult}");
 
-        string modelCheckerResult = Requirements.ModelChecker(document);
+        string modelCheckerResult = Requirements.ModelChecker(document, args.IgnoredRevitLinks);
         if (!string.IsNullOrEmpty(modelCheckerResult))
             return Result.Text.Failed($"One or more relevant links not loaded:\n{modelCheckerResult}");
 
@@ -80,7 +80,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         }).ToList();
 
 
-var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames);
+var InstancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks);
 
         // Clear hosts to avoid using stale data from previous runs
         Revit.ActualRevitHosts.Clear();

@@ -185,10 +185,18 @@ public class Requirements
             }
     }
 
-    public static string ModelChecker(Document doc)
+    public static string ModelChecker(Document doc, List<string>? ignoredRevitLinks = null)
     {
         // 1. Collect all loaded link model names from "model_name_drofus" and file names (for IFCs)
-        var loadedModelNames = new List<string>();
+        var loadedModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ignoredModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
+
+        foreach (var ignoredLinkName in ignoredLinkSet)
+        {
+            AddLinkNameCandidates(ignoredModelNames, ignoredLinkName);
+        }
+
         var linkInstances = new FilteredElementCollector(doc)
             .OfClass(typeof(RevitLinkInstance))
             .Cast<RevitLinkInstance>();
@@ -202,15 +210,16 @@ public class Requirements
             if (projectInfo == null) continue;
 
             var param = projectInfo.LookupParameter("model_name_drofus");
+            string? modelName;
             if (param != null && param.HasValue && !string.IsNullOrWhiteSpace(param.AsString()))
             {
-                loadedModelNames.Add(param.AsString());
+                modelName = param.AsString();
             }
             else
             {
                 // Fallback: use file name without extension for IFCs and other documents without model_name_drofus
                 var docTitle = linkedDoc.Title;
-                string fileName = null;
+                string? fileName = null;
                 if (docTitle.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
                     docTitle.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
                 {
@@ -220,8 +229,22 @@ public class Requirements
                 {
                     fileName = docTitle;
                 }
-                loadedModelNames.Add(fileName);
+                modelName = fileName;
             }
+
+            if (string.IsNullOrWhiteSpace(modelName))
+            {
+                continue;
+            }
+
+            if (ignoredLinkSet.Contains(instance.Name))
+            {
+                AddLinkNameCandidates(ignoredModelNames, instance.Name);
+                ignoredModelNames.Add(modelName);
+                continue;
+            }
+
+            loadedModelNames.Add(modelName);
         }
 
         // 2. Collect all InfoNode family instances in the current doc
@@ -241,6 +264,7 @@ public class Requirements
             
             // Skip check if modname is "Ingen data" (placeholder for missing data)
             if (modName == "Ingen data") continue;
+            if (!string.IsNullOrWhiteSpace(modName) && ignoredModelNames.Contains(modName)) continue;
             
             if (!string.IsNullOrWhiteSpace(modName) && !loadedModelNames.Contains(modName))
             {
@@ -251,5 +275,33 @@ public class Requirements
 
         // All InfoNodes reference loaded models
         return "";
+    }
+
+    private static void AddLinkNameCandidates(HashSet<string> names, string? linkName)
+    {
+        if (string.IsNullOrWhiteSpace(linkName))
+        {
+            return;
+        }
+
+        var trimmedName = linkName.Trim();
+        names.Add(trimmedName);
+
+        var baseName = trimmedName;
+        var colonIndex = baseName.IndexOf(':');
+        if (colonIndex >= 0)
+        {
+            baseName = baseName.Substring(0, colonIndex).Trim();
+            if (!string.IsNullOrWhiteSpace(baseName))
+            {
+                names.Add(baseName);
+            }
+        }
+
+        if (baseName.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
+            baseName.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
+        {
+            names.Add(baseName.Substring(0, baseName.Length - 4));
+        }
     }
 }
