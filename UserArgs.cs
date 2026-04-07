@@ -38,6 +38,7 @@ public class AssistantArgs
     [ControlSettings("MaxHeight", "150")]
     public List<string> OccurrenceIdParameterNames { get; set; } = new List<string> 
     { 
+        "drofus_occurrence_id",
         "FOB_Database_ID.Forekomst_ID"
     };
 }
