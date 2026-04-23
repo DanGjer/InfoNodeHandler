@@ -1,12 +1,15 @@
 ---
-applyTo: '**/*.cs'
+name: assistant-revit-extension-guide
+description: Guidance for building Assistant Revit extensions in C#. Use this when implementing Args, Command, Result patterns, ValueCopy, Revit collectors, and UI control attributes.
 ---
 
 # Assistant .NET Extension Development Guide for LLMs
 
+Use this skill when implementing or updating C# Assistant extensions, especially Revit extensions.
+
 ## Core Concepts Overview
 
-You are currenty working on a Revit Extension, but here is a brief overview of all the extension types available in the Assistant ecosystem.
+You are currently working on a Revit extension, but here is a brief overview of all extension types available in the Assistant ecosystem.
 Each extension type is designed to run in a specific environment and perform specific tasks.
  
 1. **Assistant Extensions**: For desktop automation, outside of any specific application
