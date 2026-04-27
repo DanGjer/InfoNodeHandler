@@ -24,81 +24,116 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
     private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host)
     {
+        var subItemDetails = (host.SubItems ?? new List<DrofusOccurrence>())
+            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(uten navn)" : s.SubItemName)}")
+            .ToList();
+
         return new ProgressUI.HostListItem
         {
             DrofusOccurrenceId = host.DrofusOccurrenceId.ToString(),
             Name = host.ItemName ?? string.Empty,
             Mod = host.Modname ?? string.Empty,
             Tag = host.Tag ?? string.Empty,
-            SubItems = (host.SubItems?.Count ?? 0).ToString()
+            SubItems = subItemDetails.Count.ToString(),
+            SubItemDetails = subItemDetails
         };
     }
 
     public IExtensionResult Run(IRevitExtensionContext context, AssistantArgs args, CancellationToken cancellationToken)
     {
         var document = context.UIApplication.ActiveUIDocument?.Document;
-        var progressUI = new ProgressUI("InfoNode Processing...");
+        var progressUI = new ProgressUI("InfoNoder");
+        var uiEventHandler = new InfoNodeUiExternalEventHandler(progressUI.AppendLog);
+        var uiExternalEvent = ExternalEvent.Create(uiEventHandler);
         progressUI.Show();
 
         try
         {
-            progressUI.AppendLog("Starting InfoNode processing...");
+            progressUI.AppendLog("Starter InfoNode-script");
 
             if (document is null)
             {
-                progressUI.AppendLog("Error: Revit has no active model open.");
-                return Result.Text.Failed("Revit has no active model open");
+                progressUI.AppendLog("Feil: Revit har ingen aktiv modell åpen.");
+                return Result.Text.Failed("Revit har ingen aktiv modell åpen");
             }
 
-            progressUI.AppendLog("Checking requirements...");
+            progressUI.SetHostActions(
+                item =>
+                {
+                    if (!int.TryParse(item.DrofusOccurrenceId, out var hostId))
+                    {
+                        progressUI.AppendLog($"Velg mislyktes: ugyldig Infonode-ID '{item.DrofusOccurrenceId}'.");
+                        return;
+                    }
+
+                    uiEventHandler.Queue(hostId, HostUiActionType.Select);
+                    var request = uiExternalEvent.Raise();
+                    if (request != ExternalEventRequest.Accepted)
+                        progressUI.AppendLog($"Velg-forespørsel for Infonode {hostId} ble ikke akseptert ({request}).");
+                },
+                item =>
+                {
+                    if (!int.TryParse(item.DrofusOccurrenceId, out var hostId))
+                    {
+                        progressUI.AppendLog($"Gå til mislyktes: ugyldig Infonode-ID '{item.DrofusOccurrenceId}'.");
+                        return;
+                    }
+
+                    uiEventHandler.Queue(hostId, HostUiActionType.JumpTo);
+                    var request = uiExternalEvent.Raise();
+                    if (request != ExternalEventRequest.Accepted)
+                        progressUI.AppendLog($"Gå til-forespørsel for Infonode {hostId} ble ikke akseptert ({request}).");
+                });
+
+            progressUI.AppendLog("Sjekker krav...");
 
             bool pathcheckerResult = Requirements.PathChecker();
             if (!pathcheckerResult)
             {
-                progressUI.AppendLog("Error: Paths to required files not found.");
-                return Result.Text.Failed("Paths to required InfoNode family or shared parameter file not found.");
+                progressUI.AppendLog("Feil: Stier til nødvendige filer ikke funnet.");
+                return Result.Text.Failed("Stier til nødvendig InfoNode-familie eller delt parameterfil ikke funnet.");
             }
 
             if (!Requirements.FamilyChecker(document))
             {
-                progressUI.AppendLog("Family not found, attempting to import...");
+                progressUI.AppendLog("Familie ikke funnet, forsøker å importere...");
                 if (!Requirements.FamilyImporter(document, out var importError))
                 {
                     var reason = string.IsNullOrWhiteSpace(importError)
-                        ? "Required InfoNode family could not be loaded into the model."
-                        : $"Required InfoNode family could not be loaded into the model: {importError}";
+                        ? "Nødvendig InfoNode-familie kunne ikke lastes inn i modellen."
+                        : $"Nødvendig InfoNode-familie kunne ikke lastes inn i modellen: {importError}";
 
-                    progressUI.AppendLog("Error: " + reason);
+                    progressUI.AppendLog("Feil: " + reason);
                     return Result.Text.Failed(reason);
                 }
 
                 if (!Requirements.FamilyChecker(document))
                 {
-                    progressUI.AppendLog("Error: Family still not found after import.");
-                    return Result.Text.Failed("Required InfoNode family does not exist in the model after attempted import.");
+                    progressUI.AppendLog("Feil: Familie fremdeles ikke funnet etter import.");
+                    return Result.Text.Failed("Nødvendig InfoNode-familie finnes ikke i modellen etter forsøkt import.");
                 }
 
-                progressUI.AppendLog("Family imported successfully.");
+                progressUI.AppendLog("Familie importert lyktes.");
             }
 
-            progressUI.AppendLog("Checking parameters...");
+            progressUI.AppendLog("Sjekker parametere...");
             string parameterCheckerResult = Requirements.ParameterChecker(document);
             if (!string.IsNullOrEmpty(parameterCheckerResult))
             {
-                progressUI.AppendLog("Error: Missing parameters.");
-                return Result.Text.Failed($"One or more required parameters missing from the project:\n{parameterCheckerResult}");
+                progressUI.AppendLog("Feil: Parametere mangler.");
+                return Result.Text.Failed($"En eller flere nødvendige parametere mangler fra prosjektet:\n{parameterCheckerResult}");
             }
 
-            progressUI.AppendLog("Checking linked models...");
+            progressUI.AppendLog("Sjekker koblede modeller...");
             string modelCheckerResult = Requirements.ModelChecker(document, args.IgnoredRevitLinks);
             if (!string.IsNullOrEmpty(modelCheckerResult))
             {
-                progressUI.AppendLog("Error: Links not loaded.");
-                return Result.Text.Failed($"One or more relevant links not loaded:\n{modelCheckerResult}");
+                progressUI.AppendLog("Feil: Koblinger lastes ikke.");
+                return Result.Text.Failed($"En eller flere relevante koblinger lastes ikke:\n{modelCheckerResult}");
             }
 
-            progressUI.AppendLog("Requirements OK");
-            progressUI.AppendLog("Fetching occurrences from dRofus...");
+            progressUI.AppendLog("Krav OK");
+            progressUI.AppendLog("Henter forekomster fra dRofus...");
 
             var client = new dRofusClientFactory().Create(document);
 
@@ -109,9 +144,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 .Filter(Filter.Eq("is_sub_occurrence", true));
 
             var allOccurrences = client.GetOccurrences(querySubs);
-            progressUI.AppendLog($"Fetched {allOccurrences.Count()} occurrences.");
+            progressUI.AppendLog($"Hentet {allOccurrences.Count()} forekomster.");
 
-            progressUI.AppendLog("Mapping dRofus host data...");
+            progressUI.AppendLog("Kartlegger dRofus Infonode-data...");
 
             // Convert the new client occurrences to the same format as the old DrofusOccurrence objects
             var subsInDrofus = allOccurrences.Select(occ => new DrofusOccurrence
@@ -140,11 +175,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 SubItems = group.ToList()
             }).ToList();
 
-            progressUI.AppendLog("Collecting instances from linked models...");
+            progressUI.AppendLog("Samler instanser fra koblede modeller...");
             var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks);
-            progressUI.AppendLog($"Found {instancesInRevit.Count} instances in Revit.");
+            progressUI.AppendLog($"Fant {instancesInRevit.Count} instanser i Revit.");
 
-            progressUI.AppendLog("Matching dRofus hosts to Revit instances...");
+            progressUI.AppendLog("Samsvarer dRofus Infonoder med Revit-instanser...");
 
             // Clear hosts to avoid using stale data from previous runs
             Revit.ActualRevitHosts.Clear();
@@ -181,11 +216,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 () => hostCollections.Created.Select(ToHostListItem),
                 () => hostCollections.Moved.Select(ToHostListItem),
                 () => hostCollections.Updated.Select(ToHostListItem));
-            progressUI.AppendLog($"Matched {totalHosts} hosts. Starting placement...");
+            progressUI.AppendLog($"Samsvarte {totalHosts} Infonoder. Starter plassering...");
 
             if (!args.DryRun)
             {
-                using (var tx = new Transaction(document, "Place or update Infonodes"))
+                using (var tx = new Transaction(document, "Plasser eller oppdater Infonoder"))
                 {
                     tx.Start();
 
@@ -198,7 +233,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     }
 
                     tx.Commit();
-                    progressUI.AppendLog($"Placed/updated {processed} Infonodes.");
+                    progressUI.AppendLog($"Plasserte/oppdaterte {processed} Infonoder.");
                 }
             }
             else
@@ -210,7 +245,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
                     processed++;
                 }
-                progressUI.AppendLog($"Dry run: evaluated {processed} Infonodes.");
+                progressUI.AppendLog($"Torsjèk: evaluerte {processed} Infonoder.");
             }
 
             var createdIDs = new List<int>();
@@ -243,13 +278,13 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 }
             }
 
-            progressUI.AppendLog("Finalizing summary...");
+            progressUI.AppendLog("Fullfører oppsummering...");
 
-            string dryRunPrefix = args.DryRun ? "[DRY RUN]\n " : "";
-            string summarySuccess = ($"{dryRunPrefix}Success!\n\nCreated {createdCount} Infonodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} Infonodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} Infonodes\n\nDeleted {deletedCount} Infonodes");
-            string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move ops for each run\nDuplicate IDs: \n({String.Join(", ", duplicateIDs)})\nDuplicate names: \n({String.Join(", ", duplicateNames)})\n\nCreated {createdCount} Infonodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} Infonodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} Infonodes\nDeleted {deletedCount} Infonodes");
+            string dryRunPrefix = args.DryRun ? "[TORSJØK]\n " : "";
+            string summarySuccess = ($"{dryRunPrefix}Vellykket!\n\nOpprettet {createdCount} Infonoder for disse Infonodene: \n({String.Join(", ", createdIDs)})\nInfonodenavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse Infonodene: \n({String.Join(", ", movedIDs)})\nInfonodenavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\n\nSlettet {deletedCount} Infonoder");
+            string summaryPartial = ($"{dryRunPrefix}Duplikater oppdaget!\nDisse duplikatene eksisterer i en av de koblede modellene og forvirrer skriptet, og utløser move-operasjoner for hver kjøring\nDupliker-ID-er: \n({String.Join(", ", duplicateIDs)})\nDupliker-navn: \n({String.Join(", ", duplicateNames)})\n\nOpprettet {createdCount} Infonoder for disse Infonodene: \n({String.Join(", ", createdIDs)})\nInfonodenavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse Infonodene: \n({String.Join(", ", movedIDs)})\nInfonodenavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\nSlettet {deletedCount} Infonoder");
 
-            progressUI.AppendLog("Completed.");
+            progressUI.AppendLog("Fullført.");
 
             return duplicateIDs.Count > 0
                 ? Result.Text.PartiallySucceeded(summaryPartial)
@@ -257,7 +292,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         }
         finally
         {
-            progressUI.Close();
+            progressUI.Complete();
         }
     }
 }
