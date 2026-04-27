@@ -7,6 +7,31 @@ namespace InfoNode;
 
 public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 {
+    private sealed class OwnershipFailurePreprocessor : IFailuresPreprocessor
+    {
+        public bool HasOwnershipFailure { get; private set; }
+        public string FailureDescription { get; private set; } = string.Empty;
+
+        public FailureProcessingResult PreprocessFailures(FailuresAccessor failuresAccessor)
+        {
+            var failureMessages = failuresAccessor.GetFailureMessages();
+            foreach (var failureMessage in failureMessages)
+            {
+                var description = failureMessage.GetDescriptionText() ?? string.Empty;
+                if (!IsOwnershipConflictMessage(description))
+                    continue;
+
+                HasOwnershipFailure = true;
+                if (string.IsNullOrWhiteSpace(FailureDescription))
+                    FailureDescription = description;
+
+                return FailureProcessingResult.ProceedWithRollBack;
+            }
+
+            return FailureProcessingResult.Continue;
+        }
+    }
+
     private sealed class HostCollections
     {
         private readonly IReadOnlyList<Revit.ActualRevitHost> _hosts;
@@ -22,11 +47,15 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
         public IEnumerable<Revit.ActualRevitHost> Updated => _hosts.Where(h => h.Status == Revit.ActualHostStatus.Updated);
     }
 
-    private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host)
+    private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host, HashSet<int>? duplicateIds = null)
     {
         var subItemDetails = (host.SubItems ?? new List<DrofusOccurrence>())
             .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(uten navn)" : s.SubItemName)}")
             .ToList();
+
+        bool isDuplicate = duplicateIds != null
+            && duplicateIds.Contains(host.DrofusOccurrenceId)
+            && host.Status == Revit.ActualHostStatus.Moved;
 
         return new ProgressUI.HostListItem
         {
@@ -35,8 +64,30 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             Mod = host.Modname ?? string.Empty,
             Tag = host.Tag ?? string.Empty,
             SubItems = subItemDetails.Count.ToString(),
-            SubItemDetails = subItemDetails
+            SubItemDetails = subItemDetails,
+            IsDuplicate = isDuplicate,
+            DuplicateWarning = isDuplicate
+                ? "Dette elementet er et duplikat og forårsaker gjentatte move-operasjoner ved hver kjøring."
+                : string.Empty
         };
+    }
+
+    private static bool IsOwnershipConflictMessage(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        return message.Contains("owned by", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("another user", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("cannot edit", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("can't edit", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("permission", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("eies av", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("annen bruker", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("kan ikke redigere", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("tilgang", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("låst", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("laast", StringComparison.OrdinalIgnoreCase);
     }
 
     public IExtensionResult Run(IRevitExtensionContext context, AssistantArgs args, CancellationToken cancellationToken)
@@ -124,12 +175,12 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 return Result.Text.Failed($"En eller flere nødvendige parametere mangler fra prosjektet:\n{parameterCheckerResult}");
             }
 
-            progressUI.AppendLog("Sjekker koblede modeller...");
+            progressUI.AppendLog("Sjekker linkede modeller...");
             string modelCheckerResult = Requirements.ModelChecker(document, args.IgnoredRevitLinks);
             if (!string.IsNullOrEmpty(modelCheckerResult))
             {
-                progressUI.AppendLog("Feil: Koblinger lastes ikke.");
-                return Result.Text.Failed($"En eller flere relevante koblinger lastes ikke:\n{modelCheckerResult}");
+                progressUI.AppendLog("Feil: Linker lastes ikke.");
+                return Result.Text.Failed($"En eller flere relevante linker lastes ikke:\n{modelCheckerResult}");
             }
 
             progressUI.AppendLog("Krav OK");
@@ -175,7 +226,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 SubItems = group.ToList()
             }).ToList();
 
-            progressUI.AppendLog("Samler instanser fra koblede modeller...");
+            progressUI.AppendLog("Samler instanser fra linkede modeller...");
             var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks);
             progressUI.AppendLog($"Fant {instancesInRevit.Count} instanser i Revit.");
 
@@ -210,29 +261,65 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var activeRevitHosts = Revit.ActualRevitHosts;
             var hostCollections = new HostCollections(activeRevitHosts);
+
+            var seenIds = new HashSet<int>();
+            var duplicateIdSet = hostCollections.All
+                .Where(h => !seenIds.Add(h.DrofusOccurrenceId))
+                .Select(h => h.DrofusOccurrenceId)
+                .ToHashSet();
+
             int totalHosts = activeRevitHosts.Count;
             progressUI.SetHostProviders(
-                () => hostCollections.All.Select(ToHostListItem),
-                () => hostCollections.Created.Select(ToHostListItem),
-                () => hostCollections.Moved.Select(ToHostListItem),
-                () => hostCollections.Updated.Select(ToHostListItem));
+                () => hostCollections.All.Select(h => ToHostListItem(h, duplicateIdSet)),
+                () => hostCollections.Created.Select(h => ToHostListItem(h, duplicateIdSet)),
+                () => hostCollections.Moved.Select(h => ToHostListItem(h, duplicateIdSet)),
+                () => hostCollections.Updated.Select(h => ToHostListItem(h, duplicateIdSet)));
             progressUI.AppendLog($"Samsvarte {totalHosts} Infonoder. Starter plassering...");
 
             if (!args.DryRun)
             {
                 using (var tx = new Transaction(document, "Plasser eller oppdater Infonoder"))
                 {
+                    var ownershipFailurePreprocessor = new OwnershipFailurePreprocessor();
+                    var failureHandlingOptions = tx.GetFailureHandlingOptions();
+                    failureHandlingOptions.SetFailuresPreprocessor(ownershipFailurePreprocessor);
+                    failureHandlingOptions.SetClearAfterRollback(true);
+                    tx.SetFailureHandlingOptions(failureHandlingOptions);
+
                     tx.Start();
 
                     int processed = 0;
                     foreach (var host in activeRevitHosts)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
-                        processed++;
+                        try
+                        {
+                            Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
+                            processed++;
+                        }
+                        catch (Exception ex) when (IsOwnershipConflictMessage(ex.Message))
+                        {
+                            tx.RollBack();
+                            progressUI.AppendLog($"Feil: Kunne ikke redigere Infonode {host.DrofusOccurrenceId}.");
+                            progressUI.AppendLog($"Årsak: {ex.Message}");
+                            progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                            return Result.Text.Failed($"Eierskap blokkering: {ex.Message}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang til Infonode {host.DrofusOccurrenceId}.");
+                        }
                     }
 
-                    tx.Commit();
+                    var commitStatus = tx.Commit();
+                    if (ownershipFailurePreprocessor.HasOwnershipFailure || commitStatus != TransactionStatus.Committed)
+                    {
+                        var reason = string.IsNullOrWhiteSpace(ownershipFailurePreprocessor.FailureDescription)
+                            ? "Revit avbrøt transaksjonen på grunn av tilgang/eierskap."
+                            : ownershipFailurePreprocessor.FailureDescription;
+
+                        progressUI.AppendLog("Feil: Kunne ikke fullføre plassering/oppdatering fordi ett eller flere elementer er låst av annen bruker.");
+                        progressUI.AppendLog($"Årsak: {reason}");
+                        progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                        return Result.Text.Failed($"Eierskap blokkering: {reason}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang.");
+                    }
+
                     progressUI.AppendLog($"Plasserte/oppdaterte {processed} Infonoder.");
                 }
             }
@@ -242,8 +329,18 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 foreach (var host in activeRevitHosts)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
-                    processed++;
+                    try
+                    {
+                        Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
+                        processed++;
+                    }
+                    catch (Exception ex) when (IsOwnershipConflictMessage(ex.Message))
+                    {
+                        progressUI.AppendLog($"Feil: Kunne ikke redigere Infonode {host.DrofusOccurrenceId}.");
+                        progressUI.AppendLog($"Årsak: {ex.Message}");
+                        progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                        return Result.Text.Failed($"Eierskap blokkering: {ex.Message}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang til Infonode {host.DrofusOccurrenceId}.");
+                    }
                 }
                 progressUI.AppendLog($"Torsjèk: evaluerte {processed} Infonoder.");
             }
@@ -254,7 +351,6 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             var movedNames = new List<string>();
             var duplicateIDs = new List<int>();
             var duplicateNames = new List<string>();
-            var seenIds = new HashSet<int>();
 
             createdIDs.AddRange(hostCollections.Created.Select(h => h.DrofusOccurrenceId));
             createdNames.AddRange(hostCollections.Created.Select(h => h.ItemName ?? string.Empty));
@@ -267,22 +363,17 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             int updatedCount = hostCollections.Updated.Count();
             var deletedCount = Revit.TheGreatPurge(document, activeRevitHosts, args.DryRun);
 
-            foreach (var host in hostCollections.All)
-            {
-                if (!seenIds.Add(host.DrofusOccurrenceId))
-                {
-                    if (!duplicateIDs.Contains(host.DrofusOccurrenceId))
-                        duplicateIDs.Add(host.DrofusOccurrenceId);
-                    if (!duplicateNames.Contains(host.ItemName ?? string.Empty))
-                        duplicateNames.Add(host.ItemName ?? string.Empty);
-                }
-            }
+            duplicateIDs.AddRange(duplicateIdSet.OrderBy(id => id));
+            duplicateNames.AddRange(hostCollections.All
+                .Where(h => duplicateIdSet.Contains(h.DrofusOccurrenceId))
+                .Select(h => h.ItemName ?? string.Empty)
+                .Distinct());
 
             progressUI.AppendLog("Fullfører oppsummering...");
 
-            string dryRunPrefix = args.DryRun ? "[TORSJØK]\n " : "";
-            string summarySuccess = ($"{dryRunPrefix}Vellykket!\n\nOpprettet {createdCount} Infonoder for disse Infonodene: \n({String.Join(", ", createdIDs)})\nInfonodenavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse Infonodene: \n({String.Join(", ", movedIDs)})\nInfonodenavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\n\nSlettet {deletedCount} Infonoder");
-            string summaryPartial = ($"{dryRunPrefix}Duplikater oppdaget!\nDisse duplikatene eksisterer i en av de koblede modellene og forvirrer skriptet, og utløser move-operasjoner for hver kjøring\nDupliker-ID-er: \n({String.Join(", ", duplicateIDs)})\nDupliker-navn: \n({String.Join(", ", duplicateNames)})\n\nOpprettet {createdCount} Infonoder for disse Infonodene: \n({String.Join(", ", createdIDs)})\nInfonodenavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse Infonodene: \n({String.Join(", ", movedIDs)})\nInfonodenavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\nSlettet {deletedCount} Infonoder");
+            string dryRunPrefix = args.DryRun ? "[DRY RUN] " : "";
+            string summarySuccess = ($"{dryRunPrefix}Vellykket!\n\nOpprettet {createdCount} Infonoder for disse hostene: \n({String.Join(", ", createdIDs)})\nHostnavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse hostene: \n({String.Join(", ", movedIDs)})\nHostnavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\n\nSlettet {deletedCount} Infonoder");
+            string summaryPartial = ($"{dryRunPrefix}Duplikater oppdaget!\nDisse duplikatene eksisterer i en av de linkede modellene og forvirrer skriptet, og utløser move-operasjoner for hver kjøring\nDupliker-ID-er: \n({String.Join(", ", duplicateIDs)})\nDupliker-navn: \n({String.Join(", ", duplicateNames)})\n\nOpprettet {createdCount} Infonoder for disse hostene: \n({String.Join(", ", createdIDs)})\nHostnavn: \n({String.Join(", ", createdNames)})\n\nFlyttet {movedCount} Infonoder for disse hostene: \n({String.Join(", ", movedIDs)})\nHostnavn: \n({String.Join(", ", movedNames)})\n\nOppdatert {updatedCount} Infonoder\nSlettet {deletedCount} Infonoder");
 
             progressUI.AppendLog("Fullført.");
 

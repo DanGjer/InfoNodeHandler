@@ -17,6 +17,9 @@ namespace InfoNodeHandler
             public string Tag { get; set; } = string.Empty;
             public string SubItems { get; set; } = string.Empty;
             public List<string> SubItemDetails { get; set; } = new List<string>();
+            public bool IsDuplicate { get; set; }
+            public string DuplicateWarning { get; set; } = string.Empty;
+            public string DisplayId => IsDuplicate ? $"⚠ {DrofusOccurrenceId}" : DrofusOccurrenceId;
         }
 
         private Window _progressWindow = null!;
@@ -89,7 +92,7 @@ namespace InfoNodeHandler
 
             _showHostsButton = new Button
             {
-                Content = "Vis Infonoder",
+                Content = "Vis alle",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -100,7 +103,7 @@ namespace InfoNodeHandler
 
             _showNewHostsButton = new Button
             {
-                Content = "Vis nye Infonoder",
+                Content = "Vis nye",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -111,7 +114,7 @@ namespace InfoNodeHandler
 
             _showMovedHostsButton = new Button
             {
-                Content = "Vis flyttede Infonoder",
+                Content = "Vis flyttede",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -122,7 +125,7 @@ namespace InfoNodeHandler
 
             _showUpdatedHostsButton = new Button
             {
-                Content = "Vis oppdaterte Infonoder",
+                Content = "Vis Oppdaterte",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -205,7 +208,7 @@ namespace InfoNodeHandler
             headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.FontWeightProperty, FontWeights.SemiBold));
             _hostsGrid.ColumnHeaderStyle = headerStyle;
 
-            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "ID", Binding = new System.Windows.Data.Binding(nameof(HostListItem.DrofusOccurrenceId)), Width = new DataGridLength(1.2, DataGridLengthUnitType.Star) });
+            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "ID", Binding = new System.Windows.Data.Binding(nameof(HostListItem.DisplayId)), Width = new DataGridLength(1.2, DataGridLengthUnitType.Star) });
             _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Navn", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Name)), Width = new DataGridLength(1.8, DataGridLengthUnitType.Star) });
             _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Mod", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Mod)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
             _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Tag", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Tag)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
@@ -218,6 +221,15 @@ namespace InfoNodeHandler
             var rowAltTrigger = new Trigger { Property = ItemsControl.AlternationIndexProperty, Value = 1 };
             rowAltTrigger.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, _themePanelAlt));
             rowStyle.Triggers.Add(rowAltTrigger);
+            var rowDuplicateTrigger = new DataTrigger
+            {
+                Binding = new System.Windows.Data.Binding(nameof(HostListItem.IsDuplicate)),
+                Value = true
+            };
+            rowDuplicateTrigger.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, new SolidColorBrush(System.Windows.Media.Color.FromRgb(122, 40, 40))));
+            rowDuplicateTrigger.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty, _themeTextPrimary));
+            rowDuplicateTrigger.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new System.Windows.Data.Binding(nameof(HostListItem.DuplicateWarning))));
+            rowStyle.Triggers.Add(rowDuplicateTrigger);
             var rowSelectedTrigger = new Trigger { Property = DataGridRow.IsSelectedProperty, Value = true };
             rowSelectedTrigger.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, new SolidColorBrush(System.Windows.Media.Color.FromRgb(70, 44, 38))));
             rowSelectedTrigger.Setters.Add(new Setter(System.Windows.Controls.Control.ForegroundProperty, _themeTextPrimary));
