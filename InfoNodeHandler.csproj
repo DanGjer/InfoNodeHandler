@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="dRofusClient" Version="1.0.11" />
     <PackageReference Include="System.Text.Json" Version="9.0.3" />
   </ItemGroup>

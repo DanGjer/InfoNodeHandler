@@ -90,6 +90,19 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             || message.Contains("laast", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string BuildProgressBar(int current, int total, int width = 20)
+    {
+        if (total <= 0)
+            return "[--------------------] 0%";
+
+        var boundedCurrent = Math.Clamp(current, 0, total);
+        var filled = (int)Math.Round((double)boundedCurrent / total * width, MidpointRounding.AwayFromZero);
+        filled = Math.Clamp(filled, 0, width);
+        var percent = (int)Math.Round((double)boundedCurrent / total * 100, MidpointRounding.AwayFromZero);
+
+        return $"[{new string('#', filled)}{new string('-', width - filled)}] {percent}%";
+    }
+
     public IExtensionResult Run(IRevitExtensionContext context, AssistantArgs args, CancellationToken cancellationToken)
     {
         var document = context.UIApplication.ActiveUIDocument?.Document;
@@ -292,6 +305,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     foreach (var host in activeRevitHosts)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        int current = processed + 1;
+                        progressUI.UpdateProgressLine($"Processing {current}/{totalHosts} {BuildProgressBar(current, totalHosts)}");
+
                         try
                         {
                             Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);
@@ -329,6 +345,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 foreach (var host in activeRevitHosts)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    int current = processed + 1;
+                    progressUI.UpdateProgressLine($"Processing {current}/{totalHosts} {BuildProgressBar(current, totalHosts)}");
+
                     try
                     {
                         Revit.PlaceOrUpdateInfoNode(document, host, args.DryRun, args.RevitPhases, args.RevitWorkset);

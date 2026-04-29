@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ClosedXML.Excel;
 
 namespace InfoNodeHandler
 {
@@ -30,6 +31,7 @@ namespace InfoNodeHandler
         private Button _showNewHostsButton = null!;
         private Button _showMovedHostsButton = null!;
         private Button _showUpdatedHostsButton = null!;
+        private Button _exportButton = null!;
         private Button _closeButton = null!;
         private DataGrid _hostsGrid = null!;
         private System.Windows.Controls.TextBox _idFilter = null!;
@@ -45,6 +47,8 @@ namespace InfoNodeHandler
         private Action<HostListItem>? _selectHostAction;
         private Action<HostListItem>? _jumpToHostAction;
         private List<HostListItem> _allHosts = new List<HostListItem>();
+        private int _liveProgressStart = -1;
+        private int _liveProgressLength = 0;
         private readonly Brush _themeBackground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 38, 44));
         private readonly Brush _themePanel = new SolidColorBrush(System.Windows.Media.Color.FromRgb(27, 32, 37));
         private readonly Brush _themePanelAlt = new SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 27, 31));
@@ -134,6 +138,17 @@ namespace InfoNodeHandler
             };
             _showUpdatedHostsButton.Click += (s, e) => PopulateHostsList(_updatedHostsProvider, "oppdaterte Infonoder");
 
+            _exportButton = new Button
+            {
+                Content = "Eksport til Excel",
+                Height = 30,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Style = sidebarButtonStyle,
+                IsEnabled = false
+            };
+            _exportButton.Click += OnExportHostsClicked;
+
             _closeButton = new Button
             {
                 Content = "Lukk",
@@ -167,6 +182,7 @@ namespace InfoNodeHandler
             _actionsPanel.Children.Add(_showNewHostsButton);
             _actionsPanel.Children.Add(_showMovedHostsButton);
             _actionsPanel.Children.Add(_showUpdatedHostsButton);
+            _actionsPanel.Children.Add(_exportButton);
             _actionsPanel.Children.Add(_closeButton);
 
             _hostsHint = new TextBlock
@@ -341,6 +357,7 @@ namespace InfoNodeHandler
             _showNewHostsButton.IsEnabled = _newHostsProvider != null;
             _showMovedHostsButton.IsEnabled = _movedHostsProvider != null;
             _showUpdatedHostsButton.IsEnabled = _updatedHostsProvider != null;
+            _exportButton.IsEnabled = HasExportProviders();
             AppendLog("--- Ferdig. Klikk Lukk for å avslutte ---");
             _closeButton.Visibility = System.Windows.Visibility.Visible;
         }
@@ -352,7 +369,34 @@ namespace InfoNodeHandler
 
         public void AppendLog(string message)
         {
+            _liveProgressStart = -1;
+            _liveProgressLength = 0;
             _logBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+            _logBox.ScrollToEnd();
+            _progressWindow?.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
+        }
+
+        public void UpdateProgressLine(string message)
+        {
+            var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
+
+            bool hasActiveLiveLine = _liveProgressStart >= 0
+                && _liveProgressStart + _liveProgressLength <= _logBox.Text.Length;
+
+            if (hasActiveLiveLine)
+            {
+                _logBox.Select(_liveProgressStart, _liveProgressLength);
+                _logBox.SelectedText = line;
+                _liveProgressLength = line.Length;
+            }
+            else
+            {
+                _logBox.AppendText(line + Environment.NewLine);
+                _liveProgressStart = _logBox.Text.Length - (line.Length + Environment.NewLine.Length);
+                _liveProgressLength = line.Length;
+            }
+
+            _logBox.CaretIndex = _logBox.Text.Length;
             _logBox.ScrollToEnd();
             _progressWindow?.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
         }
@@ -383,6 +427,7 @@ namespace InfoNodeHandler
             _showNewHostsButton.IsEnabled = false;
             _showMovedHostsButton.IsEnabled = false;
             _showUpdatedHostsButton.IsEnabled = false;
+            _exportButton.IsEnabled = false;
 
             _hostsHint.Text = _allHostsProvider == null
                 ? "Ingen Infonoder tilgjengelig"
@@ -401,6 +446,7 @@ namespace InfoNodeHandler
             var entries = hostsProvider();
             _allHosts = entries == null ? new List<HostListItem>() : new List<HostListItem>(entries);
             ApplyHostFilters();
+            _exportButton.IsEnabled = HasExportProviders();
             _hostsHint.Text = _allHosts.Count == 0
                 ? $"No {label} found"
                 : $"Loaded {_allHosts.Count} {label}";
@@ -446,7 +492,139 @@ namespace InfoNodeHandler
             if (!string.IsNullOrWhiteSpace(_subItemsFilter.Text))
                 filtered = filtered.Where(h => (h.SubItems ?? string.Empty).Contains(_subItemsFilter.Text, StringComparison.OrdinalIgnoreCase));
 
-            _hostsGrid.ItemsSource = filtered.ToList();
+            var filteredList = filtered.ToList();
+            _hostsGrid.ItemsSource = filteredList;
+            _exportButton.IsEnabled = HasExportProviders();
+        }
+
+        private bool HasExportProviders()
+        {
+            return _allHostsProvider != null
+                || _newHostsProvider != null
+                || _movedHostsProvider != null
+                || _updatedHostsProvider != null;
+        }
+
+        private void OnExportHostsClicked(object sender, RoutedEventArgs e)
+        {
+            var allRows = _allHostsProvider?.Invoke()?.ToList() ?? new List<HostListItem>();
+            var newRows = _newHostsProvider?.Invoke()?.ToList() ?? new List<HostListItem>();
+            var movedRows = _movedHostsProvider?.Invoke()?.ToList() ?? new List<HostListItem>();
+            var updatedRows = _updatedHostsProvider?.Invoke()?.ToList() ?? new List<HostListItem>();
+
+            var totalRows = allRows.Count + newRows.Count + movedRows.Count + updatedRows.Count;
+            if (totalRows == 0)
+            {
+                AppendLog("Ingen Infonoder tilgjengelig å eksportere.");
+                return;
+            }
+
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                DefaultExt = "xlsx",
+                FileName = $"Infonoder_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                AddExtension = true,
+                OverwritePrompt = true
+            };
+
+            if (saveDialog.ShowDialog() != true)
+            {
+                AppendLog("Eksport avbrutt.");
+                return;
+            }
+
+            try
+            {
+                using var workbook = new XLWorkbook();
+                WriteHostsWorksheet(workbook, "Alle", allRows);
+                WriteHostsWorksheet(workbook, "Nye", newRows);
+                WriteHostsWorksheet(workbook, "Flyttede", movedRows);
+                WriteHostsWorksheet(workbook, "Oppdaterte", updatedRows);
+
+                workbook.SaveAs(saveDialog.FileName);
+
+                AppendLog($"Eksporterte {totalRows} Infonoder i 4 ark til: {saveDialog.FileName}");
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"Eksport feilet: {ex.Message}");
+            }
+        }
+
+        private static void WriteHostsWorksheet(XLWorkbook workbook, string worksheetName, IReadOnlyList<HostListItem> rows)
+        {
+            var worksheet = workbook.Worksheets.Add(worksheetName);
+
+            worksheet.Cell(1, 1).Value = "ID";
+            worksheet.Cell(1, 2).Value = "Navn";
+            worksheet.Cell(1, 3).Value = "Mod";
+            worksheet.Cell(1, 4).Value = "Tag";
+            worksheet.Cell(1, 5).Value = "SubItems";
+            worksheet.Cell(1, 6).Value = "ErDuplikat";
+            worksheet.Cell(1, 7).Value = "DuplikatForklaring";
+            worksheet.Cell(1, 8).Value = "SubItemDetails";
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                int excelRow = i + 2;
+
+                worksheet.Cell(excelRow, 1).Value = row.DrofusOccurrenceId ?? string.Empty;
+                worksheet.Cell(excelRow, 2).Value = row.Name ?? string.Empty;
+                worksheet.Cell(excelRow, 3).Value = row.Mod ?? string.Empty;
+                worksheet.Cell(excelRow, 4).Value = row.Tag ?? string.Empty;
+                worksheet.Cell(excelRow, 5).Value = row.SubItems ?? string.Empty;
+                worksheet.Cell(excelRow, 6).Value = row.IsDuplicate;
+                worksheet.Cell(excelRow, 7).Value = row.DuplicateWarning ?? string.Empty;
+                worksheet.Cell(excelRow, 8).Value = row.SubItemDetails == null
+                    ? string.Empty
+                    : string.Join("; ", row.SubItemDetails);
+
+                if (row.IsDuplicate)
+                {
+                    var duplicateRange = worksheet.Range(excelRow, 1, excelRow, 8);
+                    duplicateRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#FDECEC");
+                    duplicateRange.Style.Font.FontColor = XLColor.FromHtml("#8E1F1F");
+                }
+            }
+
+            var usedRange = worksheet.Range(1, 1, Math.Max(rows.Count + 1, 1), 8);
+            var headerRange = worksheet.Range(1, 1, 1, 8);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#254E70");
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            usedRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+            usedRange.Style.Alignment.WrapText = true;
+            usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            usedRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#C5D1DD");
+            usedRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#DCE3EA");
+
+            for (int excelRow = 2; excelRow <= rows.Count + 1; excelRow++)
+            {
+                if (worksheet.Cell(excelRow, 6).GetBoolean())
+                    continue;
+
+                if (excelRow % 2 == 0)
+                {
+                    var stripeRange = worksheet.Range(excelRow, 1, excelRow, 8);
+                    stripeRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#F7FAFC");
+                }
+            }
+
+            worksheet.SheetView.FreezeRows(1);
+            worksheet.Row(1).Height = 22;
+            worksheet.Columns().AdjustToContents();
+            worksheet.Column(8).Width = Math.Min(Math.Max(worksheet.Column(8).Width, 45), 70);
+            worksheet.Range(1, 1, Math.Max(rows.Count + 1, 1), 8).SetAutoFilter();
+
+            worksheet.Column(1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Column(5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            worksheet.Column(6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
 
         private DataGridTemplateColumn CreateActionButtonColumn(string header, string buttonText, RoutedEventHandler clickHandler)
