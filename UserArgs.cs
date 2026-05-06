@@ -7,6 +7,9 @@ public class AssistantArgs
     [Description("Dry run"), ControlData(ToolTip = "")]
     public bool DryRun { get; set; } = false;
 
+    [Description("Include local model"), ControlData(ToolTip = "Sample tooltip")]
+    public bool IncludeLocalModel { get; set; } = false;
+
     [Description("Host occurrence model name"), ControlData(ToolTip = "Sample tooltip")]
     public string ParamHostOccModelName { get; set; } = "parent_occurrence_id_occurrence_data_17_11_11_10";
 
