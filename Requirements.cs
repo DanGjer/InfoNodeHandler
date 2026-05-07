@@ -304,4 +304,12 @@ public class Requirements
             names.Add(baseName.Substring(0, baseName.Length - 4));
         }
     }
+
+    public static bool FilterChecker(Document doc, AssistantArgs? args)
+    {
+        if (args?.SubFilter == null)
+            return false;
+
+        return args.SubFilter.Count > 0;
+    }
 }
