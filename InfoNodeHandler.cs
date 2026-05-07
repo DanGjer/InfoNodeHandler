@@ -240,7 +240,8 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             }).ToList();
 
             progressUI.AppendLog("Samler instanser fra linkede modeller...");
-            var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks);
+            var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks, args.IncludeLocalModel);
+
             progressUI.AppendLog($"Fant {instancesInRevit.Count} instanser i Revit.");
 
             progressUI.AppendLog("Samsvarer dRofus Infonoder med Revit-instanser...");

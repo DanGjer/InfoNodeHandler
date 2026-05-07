@@ -179,10 +179,37 @@ public class Revit
         return instances;
     }
 
-    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, List<string>? ignoredRevitLinks = null)
+    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, List<string>? ignoredRevitLinks = null, bool includeLocalModel = false)
     {
         var allInstances = new List<RevitInstance>();
         var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
+
+        if (includeLocalModel)
+        {
+            // Prefer Project Information model_name_drofus; fall back to the document title.
+            string? localModelName = null;
+            var localModelNameParam = doc.ProjectInformation?.LookupParameter("model_name_drofus");
+            if (localModelNameParam != null && localModelNameParam.HasValue)
+            {
+                localModelName = localModelNameParam.AsString();
+            }
+
+            if (string.IsNullOrWhiteSpace(localModelName))
+            {
+                var localDocTitle = doc.Title;
+                if (localDocTitle.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
+                    localDocTitle.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
+                {
+                    localModelName = localDocTitle.Substring(0, localDocTitle.Length - 4);
+                }
+                else
+                {
+                    localModelName = localDocTitle;
+                }
+            }
+
+            allInstances.AddRange(CollectAllRevitInstances(doc, occurrenceIdParameterNames, localModelName));
+        }
 
         // Only process linked documents, not the main document
         var linkInstances = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>();
