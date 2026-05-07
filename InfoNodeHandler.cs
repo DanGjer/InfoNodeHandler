@@ -201,13 +201,14 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var client = new dRofusClientFactory().Create(document);
 
-            var filterSelect = Filter.Eq("is_sub_occurrence", true);
+            var filterSelect = Filter.And(Filter.Eq("is_sub_occurrence", true));
 
             if (args?.SubFilter != null && args.SubFilter.Any())
             {
-                filterSelect = Filter.And(
-                Filter.Eq("is_sub_occurrence", true),
-                Filter.In("article_sub_category_id_name", args.SubFilter.ToArray()));
+                    filterSelect = Filter.And(
+                    Filter.Eq("is_sub_occurrence", true),
+                    Filter.In("article_sub_category_id_name", args.SubFilter.ToArray())
+                );
             }
 
             var querySubs = Query.List()
@@ -217,6 +218,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var allOccurrences = client.GetOccurrences(querySubs);
             progressUI.AppendLog($"Hentet {allOccurrences.Count()} forekomster.");
+            if (allOccurrences.Count() == 0)
+            {
+                progressUI.AppendLog("Fant ingenting i dRofus, sjekk filteret");
+                return Result.Text.Failed("Sjekk filter");
+            }
 
             progressUI.AppendLog("Kartlegger dRofus Infonode-data...");
 
