@@ -201,14 +201,28 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var client = new dRofusClientFactory().Create(document);
 
-            // Build query with filters: is_sub_occurrence = true
-            // Note: We no longer filter by host model name because IFC-imported elements won't have a model name in dRofus
+            var filterSelect = Filter.And(Filter.Eq("is_sub_occurrence", true));
+
+            if (args?.SubFilter != null && args.SubFilter.Any())
+            {
+                    filterSelect = Filter.And(
+                    Filter.Eq("is_sub_occurrence", true),
+                    Filter.In("article_sub_category_id_name", args.SubFilter.ToArray())
+                );
+            }
+
             var querySubs = Query.List()
                 .Select("Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostItemData1, args.ParamHostItemData2, "parent_occurrence_id_classification_number")
-                .Filter(Filter.Eq("is_sub_occurrence", true));
+                .Filter(filterSelect);
+                
 
             var allOccurrences = client.GetOccurrences(querySubs);
             progressUI.AppendLog($"Hentet {allOccurrences.Count()} forekomster.");
+            if (allOccurrences.Count() == 0)
+            {
+                progressUI.AppendLog("Fant ingenting i dRofus, sjekk filteret");
+                return Result.Text.Failed("Sjekk filter");
+            }
 
             progressUI.AppendLog("Kartlegger dRofus Infonode-data...");
 

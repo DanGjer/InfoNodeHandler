@@ -34,6 +34,10 @@ public class AssistantArgs
     [ControlSettings("SelectionMode", "Multiple")]
     public List<string> IgnoredRevitLinks { get; set; } = [];
 
+    [Description("Sub item category filter")]
+    [ControlData(ToolTip = "Optional list used in dRofus IN-filter for article_sub_category_id_name")]
+    public List<string> SubFilter { get; set; } = [];
+
     internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
 
     [Description("Occurrence ID Parameter Names")]
