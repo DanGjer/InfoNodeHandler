@@ -151,13 +151,6 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             progressUI.AppendLog("Sjekker krav...");
 
-            bool FilterCheckerResult = Requirements.FilterChecker(document, args);
-            if (!FilterCheckerResult)
-            {
-                progressUI.AppendLog("Feil: Subfilter ikke lagt inn");
-                return Result.Text.Failed("Filter må legges inn");
-            }
-
             bool pathcheckerResult = Requirements.PathChecker();
             if (!pathcheckerResult)
             {
@@ -208,12 +201,19 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var client = new dRofusClientFactory().Create(document);
 
+            var filterSelect = Filter.Eq("is_sub_occurrence", true);
+
+            if (args?.SubFilter != null && args.SubFilter.Any())
+            {
+                filterSelect = Filter.And(
+                Filter.Eq("is_sub_occurrence", true),
+                Filter.In("article_sub_category_id_name", args.SubFilter.ToArray()));
+            }
+
             var querySubs = Query.List()
                 .Select("Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostItemData1, args.ParamHostItemData2, "parent_occurrence_id_classification_number")
-                .Filter(Filter.And(
-                    Filter.Eq("is_sub_occurrence", true),
-                    Filter.In("article_sub_category_id_name", args.SubFilter.ToArray())
-                ));
+                .Filter(filterSelect);
+                
 
             var allOccurrences = client.GetOccurrences(querySubs);
             progressUI.AppendLog($"Hentet {allOccurrences.Count()} forekomster.");
