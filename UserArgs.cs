@@ -37,11 +37,6 @@ public class AssistantArgs
     internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
 
     [Description("Occurrence ID Parameter Names")]
-    [ControlSettings("CompactMode", "true")]
-    [ControlSettings("MaxHeight", "150")]
-    public List<string> OccurrenceIdParameterNames { get; set; } = new List<string> 
-    { 
-        "drofus_occurrence_id",
-        "FOB_Database_ID.Forekomst_ID"
-    };
+    [ControlData(ToolTip = "Parameter names used to identify the occurrence ID on Revit elements")]
+    public List<string> OccurrenceIdParameterNames { get; set; } = ["drofus_occurrence_id", "FOB_Database_ID.Forekomst_ID"];
 }
