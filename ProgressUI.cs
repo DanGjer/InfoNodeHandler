@@ -222,12 +222,23 @@ namespace InfoNodeHandler
             headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.BorderBrushProperty, _themeAccentMuted));
             headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.BorderThicknessProperty, new Thickness(0, 0, 0, 1)));
             headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.FontWeightProperty, FontWeights.SemiBold));
+            headerStyle.Setters.Add(new Setter(FrameworkElement.HeightProperty, 80.0));
+            headerStyle.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Stretch));
+            headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+            headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.VerticalContentAlignmentProperty, VerticalAlignment.Stretch));
+            headerStyle.Setters.Add(new Setter(System.Windows.Controls.Control.PaddingProperty, new Thickness(0)));
             _hostsGrid.ColumnHeaderStyle = headerStyle;
 
-            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "ID", Binding = new System.Windows.Data.Binding(nameof(HostListItem.DisplayId)), Width = new DataGridLength(1.2, DataGridLengthUnitType.Star) });
-            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Navn", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Name)), Width = new DataGridLength(1.8, DataGridLengthUnitType.Star) });
-            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Mod", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Mod)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
-            _hostsGrid.Columns.Add(new DataGridTextColumn { Header = "Tag", Binding = new System.Windows.Data.Binding(nameof(HostListItem.Tag)), Width = new DataGridLength(1.4, DataGridLengthUnitType.Star) });
+            _idFilter = CreateFilterBox("ID");
+            _nameFilter = CreateFilterBox("Name");
+            _modFilter = CreateFilterBox("Mod");
+            _tagFilter = CreateFilterBox("Tag");
+            _subItemsFilter = CreateFilterBox("SubItems");
+
+            _hostsGrid.Columns.Add(CreateFilterableColumn("ID", nameof(HostListItem.DisplayId), 1.2, _idFilter));
+            _hostsGrid.Columns.Add(CreateFilterableColumn("Navn", nameof(HostListItem.Name), 1.8, _nameFilter));
+            _hostsGrid.Columns.Add(CreateFilterableColumn("Mod", nameof(HostListItem.Mod), 1.4, _modFilter));
+            _hostsGrid.Columns.Add(CreateFilterableColumn("Tag", nameof(HostListItem.Tag), 1.4, _tagFilter));
             _hostsGrid.Columns.Add(CreateSubItemsButtonColumn());
             _hostsGrid.Columns.Add(CreateActionButtonColumn("Velg", "Velg", OnSelectHostClicked));
             _hostsGrid.Columns.Add(CreateActionButtonColumn("Gå til", "Gå til", OnJumpToHostClicked));
@@ -252,26 +263,9 @@ namespace InfoNodeHandler
             rowStyle.Triggers.Add(rowSelectedTrigger);
             _hostsGrid.RowStyle = rowStyle;
 
-            var filterGrid = new System.Windows.Controls.Grid { Margin = new Thickness(10, 0, 10, 8) };
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.8, GridUnitType.Star) });
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.4, GridUnitType.Star) });
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.4, GridUnitType.Star) });
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star) });
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star) }); // Select column
-            filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star) }); // Jump column
-
-            _idFilter = CreateFilterBox("ID");
-            _nameFilter = CreateFilterBox("Name");
-            _modFilter = CreateFilterBox("Mod");
-            _tagFilter = CreateFilterBox("Tag");
-            _subItemsFilter = CreateFilterBox("SubItems");
-
-            AddFilterControl(filterGrid, _idFilter, 0);
-            AddFilterControl(filterGrid, _nameFilter, 1);
-            AddFilterControl(filterGrid, _modFilter, 2);
-            AddFilterControl(filterGrid, _tagFilter, 3);
-            AddFilterControl(filterGrid, _subItemsFilter, 4);
+            var cellStyle = new Style(typeof(DataGridCell));
+            cellStyle.Setters.Add(new EventSetter(FrameworkElement.ContextMenuOpeningEvent, new ContextMenuEventHandler(OnHostGridCellContextMenuOpening)));
+            _hostsGrid.CellStyle = cellStyle;
 
             var hostsHeader = new TextBlock
             {
@@ -295,17 +289,14 @@ namespace InfoNodeHandler
             _hostsPanel = new System.Windows.Controls.Grid();
             _hostsPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _hostsPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _hostsPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _hostsPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             _hostsPanel.Children.Add(hostsHeader);
             _hostsPanel.Children.Add(_hostsHint);
-            _hostsPanel.Children.Add(filterGrid);
             _hostsPanel.Children.Add(hostsBorder);
 
             System.Windows.Controls.Grid.SetRow(hostsHeader, 0);
             System.Windows.Controls.Grid.SetRow(_hostsHint, 1);
-            System.Windows.Controls.Grid.SetRow(filterGrid, 2);
-            System.Windows.Controls.Grid.SetRow(hostsBorder, 3);
+            System.Windows.Controls.Grid.SetRow(hostsBorder, 2);
 
             var layoutGrid = new System.Windows.Controls.Grid();
             layoutGrid.Background = _themeBackground;
@@ -333,7 +324,7 @@ namespace InfoNodeHandler
                 Height = 900,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.CanResize,
-                Topmost = false,
+                Topmost = true,
                 Background = _themeBackground,
                 Content = layoutGrid
             };
@@ -650,6 +641,59 @@ namespace InfoNodeHandler
             };
         }
 
+        private DataGridTextColumn CreateFilterableColumn(string columnHeader, string bindingPath, double starWidth, System.Windows.Controls.TextBox filterBox)
+        {
+            // Create header grid with column name and filter textbox
+            var headerGrid = new System.Windows.Controls.Grid
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = new Thickness(2)
+            };
+
+            headerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            headerGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var headerText = new TextBlock
+            {
+                Text = columnHeader,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = _themeTextPrimary,
+                Margin = new Thickness(4, 2, 4, 4),
+                FontSize = 12
+            };
+
+            var filterClone = new System.Windows.Controls.TextBox
+            {
+                MinHeight = 26,
+                Padding = new Thickness(4, 3, 4, 3),
+                FontSize = 12,
+                FontFamily = new FontFamily("Consolas"),
+                Background = _themePanelAlt,
+                Foreground = _themeTextPrimary,
+                BorderBrush = _themeAccent,
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(4, 0, 4, 4)
+            };
+
+            // Bind the filter textbox to the original filterBox
+            var binding = new System.Windows.Data.Binding { Source = filterBox, Path = new PropertyPath(System.Windows.Controls.TextBox.TextProperty), Mode = System.Windows.Data.BindingMode.TwoWay, UpdateSourceTrigger = System.Windows.Data.UpdateSourceTrigger.PropertyChanged };
+            filterClone.SetBinding(System.Windows.Controls.TextBox.TextProperty, binding);
+
+            headerGrid.Children.Add(headerText);
+            headerGrid.Children.Add(filterClone);
+            System.Windows.Controls.Grid.SetRow(headerText, 0);
+            System.Windows.Controls.Grid.SetRow(filterClone, 1);
+
+            return new DataGridTextColumn
+            {
+                Header = headerGrid,
+                Binding = new System.Windows.Data.Binding(bindingPath),
+                Width = new DataGridLength(starWidth, DataGridLengthUnitType.Star)
+            };
+        }
+
         private DataGridTemplateColumn CreateSubItemsButtonColumn()
         {
             var buttonFactory = new FrameworkElementFactory(typeof(Button));
@@ -671,6 +715,44 @@ namespace InfoNodeHandler
                 CellTemplate = template,
                 Width = new DataGridLength(0.8, DataGridLengthUnitType.Star)
             };
+        }
+
+        private void OnHostGridCellContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            if (sender is not DataGridCell cell || cell.DataContext is not HostListItem item)
+                return;
+
+            var value = GetHostGridCellValue(cell, item);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                cell.ContextMenu = null;
+                return;
+            }
+
+            var copyItem = new System.Windows.Controls.MenuItem { Header = "Kopier verdi" };
+            copyItem.Click += (_, _) => Clipboard.SetText(value);
+
+            var menu = new System.Windows.Controls.ContextMenu();
+            menu.Items.Add(copyItem);
+            cell.ContextMenu = menu;
+        }
+
+        private static string GetHostGridCellValue(DataGridCell cell, HostListItem item)
+        {
+            if (cell.Column is DataGridBoundColumn boundColumn
+                && boundColumn.Binding is System.Windows.Data.Binding binding
+                && !string.IsNullOrWhiteSpace(binding.Path?.Path))
+            {
+                var property = typeof(HostListItem).GetProperty(binding.Path.Path);
+                return property?.GetValue(item)?.ToString() ?? string.Empty;
+            }
+
+            // "Tilleggsartikler" is a template column that shows count via a button label.
+            if (cell.Column?.DisplayIndex == 4)
+                return item.SubItems ?? string.Empty;
+
+            // Action button columns (Velg/Gå til) intentionally do not expose copy value.
+            return string.Empty;
         }
 
         private void OnSubItemsClicked(object sender, RoutedEventArgs e)
