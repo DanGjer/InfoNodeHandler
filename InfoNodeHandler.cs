@@ -341,7 +341,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                             tx.RollBack();
                             progressUI.AppendLog($"Feil: Kunne ikke redigere Infonode {host.DrofusOccurrenceId}.");
                             progressUI.AppendLog($"Årsak: {ex.Message}");
-                            progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                            progressUI.AppendLog("Vennligst be kollega om å synce...");
                             return Result.Text.Failed($"Eierskap blokkering: {ex.Message}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang til Infonode {host.DrofusOccurrenceId}.");
                         }
                     }
@@ -355,7 +355,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
                         progressUI.AppendLog("Feil: Kunne ikke fullføre plassering/oppdatering fordi ett eller flere elementer er låst av annen bruker.");
                         progressUI.AppendLog($"Årsak: {reason}");
-                        progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                        progressUI.AppendLog("Be kollega om å synce...");
                         return Result.Text.Failed($"Eierskap blokkering: {reason}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang.");
                     }
 
