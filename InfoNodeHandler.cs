@@ -192,11 +192,19 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             string modelCheckerResult = Requirements.ModelChecker(document, args.IgnoredRevitLinks);
             if (!string.IsNullOrEmpty(modelCheckerResult))
             {
-                progressUI.AppendLog("Feil: Linker lastes ikke.");
+                progressUI.AppendLog($"Feil: En eller flere linker er ikke lastet inn: {modelCheckerResult}");
                 return Result.Text.Failed($"En eller flere relevante linker lastes ikke:\n{modelCheckerResult}");
             }
 
             progressUI.AppendLog("Krav OK");
+            if (args.SubFilter == null || args.SubFilter.Count == 0)
+            {
+                progressUI.AppendLog("Ingen filter lagt inn, henter alle subitems fra dRofus");
+            }
+            else
+            {
+                progressUI.AppendLog("Filtrerer på: " + string.Join(", ", args.SubFilter));
+            }
             progressUI.AppendLog("Henter forekomster fra dRofus...");
 
             var client = new dRofusClientFactory().Create(document);
