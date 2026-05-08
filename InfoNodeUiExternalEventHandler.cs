@@ -93,7 +93,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
             if (selectedIds.Count > 1)
                 _log($"{GetActionVerb(action)} {selectedIds.Count} dupliserte InfoNoder for Infonode {hostId.Value}.");
             else
-                _log($"{GetActionVerb(action)} InfoNode {selectedIds.First().IntegerValue} for Infonode {hostId.Value}.");
+                _log($"{GetActionVerb(action)} InfoNode {selectedIds.First().Value} for Infonode {hostId.Value}.");
 
             return;
         }
@@ -103,7 +103,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         if (action == HostUiActionType.JumpTo)
             uiDoc.ShowElements(instance.Id);
 
-        _log($"{GetActionVerb(action)} InfoNode {instance.Id.IntegerValue} for Infonode {hostId.Value}.");
+        _log($"{GetActionVerb(action)} InfoNode {instance.Id.Value} for Infonode {hostId.Value}.");
     }
 
     public string GetName() => "InfoNode UI External Event Handler";
@@ -123,7 +123,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         var items = matches.Select(f => new DuplicateInfoNodeItem
         {
             Instance = f,
-            ElementId = f.Id.IntegerValue.ToString(),
+            ElementId = f.Id.Value.ToString(),
             Name = f.LookupParameter("InfoNode_hostname")?.AsString() ?? string.Empty,
             Tag = f.LookupParameter("InfoNode_hosttag")?.AsString() ?? string.Empty,
             Modname = f.LookupParameter("InfoNode_modname")?.AsString() ?? string.Empty

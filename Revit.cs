@@ -1,5 +1,7 @@
 using Autodesk.Revit.DB.Structure;
 using Autodesk.Revit.DB;
+using dRofusClient.Filters;
+using dRofusClient.Occurrences;
 namespace InfoNode;
 
 
@@ -524,6 +526,47 @@ public class RevitLinkInstanceAutoFillCollector : IRevitAutoFillCollector<Assist
         catch (Exception ex)
         {
             result[string.Empty] = $"Failed to collect Revit links: {ex.Message}";
+        }
+
+        return result;
+    }
+}
+
+public class DrofusSubCategoryAutoFillCollector : IRevitAutoFillCollector<AssistantArgs>
+{
+    public Dictionary<string, string> Get(UIApplication uiApplication, AssistantArgs args)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var doc = uiApplication.ActiveUIDocument?.Document;
+            if (doc == null)
+            {
+                return result;
+            }
+
+            var client = new dRofusClientFactory().Create(doc);
+            var query = Query.List()
+                .Select("article_sub_category_id_name")
+                .Filter(Filter.Eq("is_sub_occurrence", true));
+
+            var values = client.GetOccurrences(query)
+                .Select(o => o.AdditionalProperties?.GetValueOrDefault("article_sub_category_id_name")?.ToString())
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Select(v => v!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .Take(500);
+
+            foreach (var value in values)
+            {
+                result[value] = value;
+            }
+        }
+        catch (Exception ex)
+        {
+            result[string.Empty] = $"Failed to collect dRofus sub categories: {ex.Message}";
         }
 
         return result;

@@ -32,13 +32,14 @@ public class AssistantArgs
     [CustomRevitAutoFill(typeof(RevitLinkInstanceAutoFillCollector))]
     public List<string> IgnoredRevitLinks { get; set; } = [];
 
-    [Description("Sub item category filter")]
-    [ControlData(ToolTip = "Optional list used in dRofus IN-filter for article_sub_category_id_name")]
-    public List<string> SubFilter { get; set; } = [];
-
     internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
 
     [Description("Occurrence ID Parameter Names")]
     [ControlData(ToolTip = "Parameter names used to identify the occurrence ID on Revit elements")]
     public List<string> OccurrenceIdParameterNames { get; set; } = ["drofus_occurrence_id", "FOB_Database_ID.Forekomst_ID"];
+
+    [Description("Sub item category filter"), ControlData(ToolTip = "If nothing is selected, then ALL subs will be looked up")]
+    [ControlType(ControlType.ListBox), ControlSettings("CompactMode", "true")]
+    [CustomRevitAutoFill(typeof(DrofusSubCategoryAutoFillCollector))]
+    public List<string> SubFilter { get; set; } = [];
 }
