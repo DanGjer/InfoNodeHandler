@@ -28,10 +28,8 @@ public class AssistantArgs
     public string? RevitWorkset { get; set; }
 
     [Description("Select links to be ignored"), ControlData(ToolTip = "Select ignored Revit links")]
+    [ControlType(ControlType.ListBox), ControlSettings("CompactMode", "true")]
     [CustomRevitAutoFill(typeof(RevitLinkInstanceAutoFillCollector))]
-    [ControlSettings("CompactMode", "true")]
-    [ControlSettings("MaxHeight", "150")]
-    [ControlSettings("SelectionMode", "Multiple")]
     public List<string> IgnoredRevitLinks { get; set; } = [];
 
     [Description("Sub item category filter")]
