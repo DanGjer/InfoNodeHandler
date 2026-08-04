@@ -211,9 +211,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var filterSelect = Filter.And(Filter.Eq("is_sub_occurrence", true));
 
-            if (args?.SubFilter != null && args.SubFilter.Any())
+            if (args.SubFilter != null && args.SubFilter.Any())
             {
-                    filterSelect = Filter.And(
+                filterSelect = Filter.And(
                     Filter.Eq("is_sub_occurrence", true),
                     Filter.In("article_sub_category_id_name", args.SubFilter.ToArray())
                 );
@@ -341,7 +341,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                             tx.RollBack();
                             progressUI.AppendLog($"Feil: Kunne ikke redigere Infonode {host.DrofusOccurrenceId}.");
                             progressUI.AppendLog($"Årsak: {ex.Message}");
-                            progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                            progressUI.AppendLog("Vennligst be kollega om å synce...");
                             return Result.Text.Failed($"Eierskap blokkering: {ex.Message}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang til Infonode {host.DrofusOccurrenceId}.");
                         }
                     }
@@ -355,7 +355,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
                         progressUI.AppendLog("Feil: Kunne ikke fullføre plassering/oppdatering fordi ett eller flere elementer er låst av annen bruker.");
                         progressUI.AppendLog($"Årsak: {reason}");
-                        progressUI.AppendLog("Vennligst be kollega synkronisere eller be om redigeringstilgang.");
+                        progressUI.AppendLog("Be kollega om å synce...");
                         return Result.Text.Failed($"Eierskap blokkering: {reason}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang.");
                     }
 
@@ -384,7 +384,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                         return Result.Text.Failed($"Eierskap blokkering: {ex.Message}\n\nVennligst be kollega synkronisere eller be om redigeringstilgang til Infonode {host.DrofusOccurrenceId}.");
                     }
                 }
-                progressUI.AppendLog($"Torsjèk: evaluerte {processed} Infonoder.");
+                progressUI.AppendLog($"Dry run: evaluerte {processed} Infonoder.");
             }
 
             var createdIDs = new List<int>();
@@ -404,6 +404,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             int updatedCount = hostCollections.Updated.Count();
             var deletedCount = Revit.TheGreatPurge(document, activeRevitHosts, args.DryRun);
+            progressUI.AppendLog($"Slettet {deletedCount} infonoder.");
 
             duplicateIDs.AddRange(duplicateIdSet.OrderBy(id => id));
             duplicateNames.AddRange(hostCollections.All
