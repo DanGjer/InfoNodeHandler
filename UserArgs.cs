@@ -27,11 +27,6 @@ public class AssistantArgs
     [RevitAutoFill(RevitAutoFillSource.Worksets)]
     public string? RevitWorkset { get; set; }
 
-    [Description("Select links to be ignored"), ControlData(ToolTip = "Select ignored Revit links")]
-    [ControlType(ControlType.ListBox), ControlSettings("CompactMode", "true")]
-    [CustomRevitAutoFill(typeof(RevitLinkInstanceAutoFillCollector))]
-    public List<string> IgnoredRevitLinks { get; set; } = [];
-
     internal const string ParamHostOccTag = "parent_occurrence_id_classification_number";
 
     [Description("Occurrence ID Parameter Names")]

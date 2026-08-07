@@ -181,10 +181,9 @@ public class Revit
         return instances;
     }
 
-    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, List<string>? ignoredRevitLinks = null, bool includeLocalModel = false)
+    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, bool includeLocalModel = false)
     {
         var allInstances = new List<RevitInstance>();
-        var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
 
         if (includeLocalModel)
         {
@@ -218,9 +217,6 @@ public class Revit
 
         foreach (var linkInstance in linkInstances)
         {
-            if (ignoredLinkSet.Contains(linkInstance.Name))
-                continue;
-
             var doclink = linkInstance.GetLinkDocument();
             if (doclink == null)
                 continue;

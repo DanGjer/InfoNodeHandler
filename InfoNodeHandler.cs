@@ -189,7 +189,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             }
 
             progressUI.AppendLog("Sjekker linkede modeller...");
-            string modelCheckerResult = Requirements.ModelChecker(document, args.IgnoredRevitLinks);
+            string modelCheckerResult = Requirements.ModelChecker(document);
             if (!string.IsNullOrEmpty(modelCheckerResult))
             {
                 progressUI.AppendLog($"Feil: En eller flere linker er ikke lastet inn: {modelCheckerResult}");
@@ -262,7 +262,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             }).ToList();
 
             progressUI.AppendLog("Samler instanser fra linkede modeller...");
-            var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IgnoredRevitLinks, args.IncludeLocalModel);
+            var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IncludeLocalModel);
 
             progressUI.AppendLog($"Fant {instancesInRevit.Count} instanser i Revit.");
 

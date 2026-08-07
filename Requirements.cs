@@ -185,17 +185,10 @@ public class Requirements
             }
     }
 
-    public static string ModelChecker(Document doc, List<string>? ignoredRevitLinks = null)
+    public static string ModelChecker(Document doc)
     {
         // 1. Collect all loaded link model names from "model_name_drofus" and file names (for IFCs)
         var loadedModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ignoredModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
-
-        foreach (var ignoredLinkName in ignoredLinkSet)
-        {
-            AddLinkNameCandidates(ignoredModelNames, ignoredLinkName);
-        }
 
         var linkInstances = new FilteredElementCollector(doc)
             .OfClass(typeof(RevitLinkInstance))
@@ -237,13 +230,6 @@ public class Requirements
                 continue;
             }
 
-            if (ignoredLinkSet.Contains(instance.Name))
-            {
-                AddLinkNameCandidates(ignoredModelNames, instance.Name);
-                ignoredModelNames.Add(modelName);
-                continue;
-            }
-
             loadedModelNames.Add(modelName);
         }
 
@@ -264,8 +250,6 @@ public class Requirements
             
             // Skip check if modname is "Ingen data" (placeholder for missing data)
             if (modName == "Ingen data") continue;
-            if (!string.IsNullOrWhiteSpace(modName) && ignoredModelNames.Contains(modName)) continue;
-            
             if (!string.IsNullOrWhiteSpace(modName) && !loadedModelNames.Contains(modName))
             {
                 // Found an InfoNode referencing a model that is not loaded
