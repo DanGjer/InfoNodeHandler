@@ -349,7 +349,7 @@ namespace InfoNodeHandler
             _showMovedHostsButton.IsEnabled = _movedHostsProvider != null;
             _showUpdatedHostsButton.IsEnabled = _updatedHostsProvider != null;
             _exportButton.IsEnabled = HasExportProviders();
-            AppendLog("--- Ferdig. Klikk Lukk for å avslutte ---");
+            AppendLog("--- Done. Click Close to exit ---");
             _closeButton.Visibility = System.Windows.Visibility.Visible;
         }
 
@@ -421,8 +421,8 @@ namespace InfoNodeHandler
             _exportButton.IsEnabled = false;
 
             _hostsHint.Text = _allHostsProvider == null
-                ? "Ingen Infonoder tilgjengelig"
-                : "Infonoder er tilgjengelige etter kjøring er fullført.";
+                ? "No InfoNodes available"
+                : "InfoNodes are available after the run is complete.";
         }
 
         private void PopulateHostsList(Func<IEnumerable<HostListItem>>? hostsProvider, string label)
@@ -448,7 +448,7 @@ namespace InfoNodeHandler
             var textBox = new System.Windows.Controls.TextBox
             {
                 Margin = new Thickness(3, 0, 3, 0),
-                ToolTip = $"Filtrer etter {tooltip}",
+                ToolTip = $"Filter by {tooltip}",
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 12,
                 Background = _themePanelAlt,
@@ -506,7 +506,7 @@ namespace InfoNodeHandler
             var totalRows = allRows.Count + newRows.Count + movedRows.Count + updatedRows.Count;
             if (totalRows == 0)
             {
-                AppendLog("Ingen Infonoder tilgjengelig å eksportere.");
+                AppendLog("No InfoNodes available to export.");
                 return;
             }
 
@@ -762,7 +762,7 @@ namespace InfoNodeHandler
 
             if (item.SubItemDetails == null || item.SubItemDetails.Count == 0)
             {
-                AppendLog($"Ingen tilleggsartikler funnet for Infonode {item.DrofusOccurrenceId}.");
+                AppendLog($"No sub-items found for InfoNode {item.DrofusOccurrenceId}.");
                 return;
             }
 

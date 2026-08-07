@@ -11,13 +11,22 @@ public class AssistantArgs
     public bool IncludeLocalModel { get; set; } = false;
 
     [Description("Host occurrence model name"), ControlData(ToolTip = "Sample tooltip")]
-    public string ParamHostOccModelName { get; set; } = "parent_occurrence_id_occurrence_data_17_11_11_10";
+    public string ParamHostOccModelName { get; set; } = "";
 
     [Description("Host item data 1"), ControlData(ToolTip = "Sample tooltip")]
-    public string ParamHostItemData1 { get; set; } = "parent_occurrence_id_article_id_dyn_article_13101110";
+    public string ParamHostItemData1 { get; set; } = "";
 
     [Description("Host item data 2"), ControlData(ToolTip = "Sample tooltip")]
-    public string ParamHostItemData2 { get; set; } = "parent_occurrence_id_article_id_dyn_article_13101211";
+    public string ParamHostItemData2 { get; set; } = "";
+
+    [Description("Host item data 3"), ControlData(ToolTip = "Sample tooltip")]
+    public string ParamHostItemData3 { get; set; } = "";
+
+    [Description("Host occurrence data 1"), ControlData(ToolTip = "Sample tooltip")]
+    public string ParamHostOccurrenceData1 { get; set; } = "";
+
+    [Description("Host occurrence data 2"), ControlData(ToolTip = "Sample tooltip")]
+    public string ParamHostOccurrenceData2 { get; set; } = "";
 
     [Description("Select a phase for the infonodes"), ControlData(ToolTip = "Select the phase for InfoNode placement")]
     [RevitAutoFill(RevitAutoFillSource.Phases)]
