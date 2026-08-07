@@ -96,51 +96,51 @@ namespace InfoNodeHandler
 
             _showHostsButton = new Button
             {
-                Content = "Vis alle",
+                Content = "Show all",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Style = sidebarButtonStyle,
                 IsEnabled = false
             };
-            _showHostsButton.Click += (s, e) => PopulateHostsList(_allHostsProvider, "alle Infonoder");
+            _showHostsButton.Click += (s, e) => PopulateHostsList(_allHostsProvider, "all InfoNodes");
 
             _showNewHostsButton = new Button
             {
-                Content = "Vis nye",
+                Content = "Show new",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Style = sidebarButtonStyle,
                 IsEnabled = false
             };
-            _showNewHostsButton.Click += (s, e) => PopulateHostsList(_newHostsProvider, "nye Infonoder");
+            _showNewHostsButton.Click += (s, e) => PopulateHostsList(_newHostsProvider, "new InfoNodes");
 
             _showMovedHostsButton = new Button
             {
-                Content = "Vis flyttede",
+                Content = "Show moved",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Style = sidebarButtonStyle,
                 IsEnabled = false
             };
-            _showMovedHostsButton.Click += (s, e) => PopulateHostsList(_movedHostsProvider, "flyttede Infonoder");
+            _showMovedHostsButton.Click += (s, e) => PopulateHostsList(_movedHostsProvider, "moved InfoNodes");
 
             _showUpdatedHostsButton = new Button
             {
-                Content = "Vis Oppdaterte",
+                Content = "Show updated",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 Style = sidebarButtonStyle,
                 IsEnabled = false
             };
-            _showUpdatedHostsButton.Click += (s, e) => PopulateHostsList(_updatedHostsProvider, "oppdaterte Infonoder");
+            _showUpdatedHostsButton.Click += (s, e) => PopulateHostsList(_updatedHostsProvider, "updated InfoNodes");
 
             _exportButton = new Button
             {
-                Content = "Eksport til Excel",
+                Content = "Export to Excel",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -151,7 +151,7 @@ namespace InfoNodeHandler
 
             _closeButton = new Button
             {
-                Content = "Lukk",
+                Content = "Close",
                 Height = 30,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -162,7 +162,7 @@ namespace InfoNodeHandler
 
             var actionsHeader = new TextBlock
             {
-                Text = "Handlinger",
+                Text = "Actions",
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(10, 10, 10, 6),
                 Foreground = _themeTextPrimary
@@ -170,7 +170,7 @@ namespace InfoNodeHandler
 
             var actionsHint = new TextBlock
             {
-                Text = "Resevert plass for fremtidige knapper og sånn",
+                Text = "Reserved space for future actions",
                 Margin = new Thickness(10, 0, 10, 10),
                 Foreground = _themeTextMuted,
                 TextWrapping = TextWrapping.Wrap
@@ -236,12 +236,12 @@ namespace InfoNodeHandler
             _subItemsFilter = CreateFilterBox("SubItems");
 
             _hostsGrid.Columns.Add(CreateFilterableColumn("ID", nameof(HostListItem.DisplayId), 1.2, _idFilter));
-            _hostsGrid.Columns.Add(CreateFilterableColumn("Navn", nameof(HostListItem.Name), 1.8, _nameFilter));
+            _hostsGrid.Columns.Add(CreateFilterableColumn("Name", nameof(HostListItem.Name), 1.8, _nameFilter));
             _hostsGrid.Columns.Add(CreateFilterableColumn("Mod", nameof(HostListItem.Mod), 1.4, _modFilter));
             _hostsGrid.Columns.Add(CreateFilterableColumn("Tag", nameof(HostListItem.Tag), 1.4, _tagFilter));
             _hostsGrid.Columns.Add(CreateSubItemsButtonColumn());
-            _hostsGrid.Columns.Add(CreateActionButtonColumn("Velg", "Velg", OnSelectHostClicked));
-            _hostsGrid.Columns.Add(CreateActionButtonColumn("Gå til", "Gå til", OnJumpToHostClicked));
+            _hostsGrid.Columns.Add(CreateActionButtonColumn("Select", "Select", OnSelectHostClicked));
+            _hostsGrid.Columns.Add(CreateActionButtonColumn("Jump", "Jump", OnJumpToHostClicked));
 
             var rowStyle = new Style(typeof(DataGridRow));
             rowStyle.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, _themePanel));
@@ -269,7 +269,7 @@ namespace InfoNodeHandler
 
             var hostsHeader = new TextBlock
             {
-                Text = "Infonoder",
+                Text = "InfoNodes",
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(10, 10, 10, 6),
                 Foreground = _themeTextPrimary
@@ -349,7 +349,7 @@ namespace InfoNodeHandler
             _showMovedHostsButton.IsEnabled = _movedHostsProvider != null;
             _showUpdatedHostsButton.IsEnabled = _updatedHostsProvider != null;
             _exportButton.IsEnabled = HasExportProviders();
-            AppendLog("--- Ferdig. Klikk Lukk for å avslutte ---");
+            AppendLog("--- Done. Click Close to exit ---");
             _closeButton.Visibility = System.Windows.Visibility.Visible;
         }
 
@@ -421,8 +421,8 @@ namespace InfoNodeHandler
             _exportButton.IsEnabled = false;
 
             _hostsHint.Text = _allHostsProvider == null
-                ? "Ingen Infonoder tilgjengelig"
-                : "Infonoder er tilgjengelige etter kjøring er fullført.";
+                ? "No InfoNodes available"
+                : "InfoNodes are available after the run is completed.";
         }
 
         private void PopulateHostsList(Func<IEnumerable<HostListItem>>? hostsProvider, string label)
@@ -448,7 +448,7 @@ namespace InfoNodeHandler
             var textBox = new System.Windows.Controls.TextBox
             {
                 Margin = new Thickness(3, 0, 3, 0),
-                ToolTip = $"Filtrer etter {tooltip}",
+                ToolTip = $"Filter by {tooltip}",
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 12,
                 Background = _themePanelAlt,
@@ -506,7 +506,7 @@ namespace InfoNodeHandler
             var totalRows = allRows.Count + newRows.Count + movedRows.Count + updatedRows.Count;
             if (totalRows == 0)
             {
-                AppendLog("Ingen Infonoder tilgjengelig å eksportere.");
+                AppendLog("No InfoNodes available to export.");
                 return;
             }
 
@@ -514,32 +514,32 @@ namespace InfoNodeHandler
             {
                 Filter = "Excel Workbook (*.xlsx)|*.xlsx",
                 DefaultExt = "xlsx",
-                FileName = $"Infonoder_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                FileName = $"InfoNodes_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
                 AddExtension = true,
                 OverwritePrompt = true
             };
 
             if (saveDialog.ShowDialog() != true)
             {
-                AppendLog("Eksport avbrutt.");
+                AppendLog("Export canceled.");
                 return;
             }
 
             try
             {
                 using var workbook = new XLWorkbook();
-                WriteHostsWorksheet(workbook, "Alle", allRows);
-                WriteHostsWorksheet(workbook, "Nye", newRows);
-                WriteHostsWorksheet(workbook, "Flyttede", movedRows);
-                WriteHostsWorksheet(workbook, "Oppdaterte", updatedRows);
+                WriteHostsWorksheet(workbook, "All", allRows);
+                WriteHostsWorksheet(workbook, "New", newRows);
+                WriteHostsWorksheet(workbook, "Moved", movedRows);
+                WriteHostsWorksheet(workbook, "Updated", updatedRows);
 
                 workbook.SaveAs(saveDialog.FileName);
 
-                AppendLog($"Eksporterte {totalRows} Infonoder i 4 ark til: {saveDialog.FileName}");
+                AppendLog($"Exported {totalRows} InfoNodes across 4 sheets to: {saveDialog.FileName}");
             }
             catch (Exception ex)
             {
-                AppendLog($"Eksport feilet: {ex.Message}");
+                AppendLog($"Export failed: {ex.Message}");
             }
         }
 
@@ -548,12 +548,12 @@ namespace InfoNodeHandler
             var worksheet = workbook.Worksheets.Add(worksheetName);
 
             worksheet.Cell(1, 1).Value = "ID";
-            worksheet.Cell(1, 2).Value = "Navn";
+            worksheet.Cell(1, 2).Value = "Name";
             worksheet.Cell(1, 3).Value = "Mod";
             worksheet.Cell(1, 4).Value = "Tag";
             worksheet.Cell(1, 5).Value = "SubItems";
-            worksheet.Cell(1, 6).Value = "ErDuplikat";
-            worksheet.Cell(1, 7).Value = "DuplikatForklaring";
+            worksheet.Cell(1, 6).Value = "IsDuplicate";
+            worksheet.Cell(1, 7).Value = "DuplicateExplanation";
             worksheet.Cell(1, 8).Value = "SubItemDetails";
 
             for (int i = 0; i < rows.Count; i++)
@@ -704,14 +704,14 @@ namespace InfoNodeHandler
             buttonFactory.SetValue(Button.ForegroundProperty, _themeAccent);
             buttonFactory.SetValue(Button.BorderBrushProperty, _themeAccent);
             buttonFactory.SetValue(Button.BorderThicknessProperty, new Thickness(1));
-            buttonFactory.SetBinding(Button.ContentProperty, new System.Windows.Data.Binding(nameof(HostListItem.SubItems)) { StringFormat = "Vis ({0})" });
+            buttonFactory.SetBinding(Button.ContentProperty, new System.Windows.Data.Binding(nameof(HostListItem.SubItems)) { StringFormat = "View ({0})" });
             buttonFactory.AddHandler(Button.ClickEvent, new RoutedEventHandler(OnSubItemsClicked));
 
             var template = new DataTemplate { VisualTree = buttonFactory };
 
             return new DataGridTemplateColumn
             {
-                Header = "Tilleggsartikler",
+                Header = "Subitems",
                 CellTemplate = template,
                 Width = new DataGridLength(0.8, DataGridLengthUnitType.Star)
             };
@@ -729,7 +729,7 @@ namespace InfoNodeHandler
                 return;
             }
 
-            var copyItem = new System.Windows.Controls.MenuItem { Header = "Kopier verdi" };
+            var copyItem = new System.Windows.Controls.MenuItem { Header = "Copy value" };
             copyItem.Click += (_, _) => Clipboard.SetText(value);
 
             var menu = new System.Windows.Controls.ContextMenu();
@@ -747,11 +747,11 @@ namespace InfoNodeHandler
                 return property?.GetValue(item)?.ToString() ?? string.Empty;
             }
 
-            // "Tilleggsartikler" is a template column that shows count via a button label.
+            // "Subitems" is a template column that shows count via a button label.
             if (cell.Column?.DisplayIndex == 4)
                 return item.SubItems ?? string.Empty;
 
-            // Action button columns (Velg/Gå til) intentionally do not expose copy value.
+            // Action button columns (Select/Jump) intentionally do not expose copy value.
             return string.Empty;
         }
 
@@ -762,7 +762,7 @@ namespace InfoNodeHandler
 
             if (item.SubItemDetails == null || item.SubItemDetails.Count == 0)
             {
-                AppendLog($"Ingen tilleggsartikler funnet for Infonode {item.DrofusOccurrenceId}.");
+                AppendLog($"No subitems found for InfoNode {item.DrofusOccurrenceId}.");
                 return;
             }
 
@@ -781,14 +781,14 @@ namespace InfoNodeHandler
             var infoText = new TextBlock
             {
                 Margin = new Thickness(10, 10, 10, 0),
-                Text = $"{item.SubItemDetails.Count} tilleggsartikler for Infonode {item.DrofusOccurrenceId}",
+                Text = $"{item.SubItemDetails.Count} subitems for InfoNode {item.DrofusOccurrenceId}",
                 Foreground = _themeTextPrimary,
                 TextWrapping = TextWrapping.Wrap
             };
 
             var closeButton = new Button
             {
-                Content = "Lukk",
+                Content = "Close",
                 MinWidth = 90,
                 Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -814,7 +814,7 @@ namespace InfoNodeHandler
 
             var dialog = new Window
             {
-                Title = $"Tilleggsartikler - Infonode {item.DrofusOccurrenceId}",
+                Title = $"Subitems - InfoNode {item.DrofusOccurrenceId}",
                 Width = 700,
                 Height = 500,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,

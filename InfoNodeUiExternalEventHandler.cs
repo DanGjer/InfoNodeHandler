@@ -56,7 +56,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         var document = uiDoc?.Document;
         if (uiDoc == null || document == null)
         {
-            _log("UI-handling mislyktes: ingen aktiv Revit-dokument.");
+            _log("UI action failed: no active Revit document.");
             return;
         }
 
@@ -73,7 +73,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
 
         if (matches.Count == 0)
         {
-            _log($"{GetActionVerb(action)} mislyktes: ingen InfoNode funnet for Infonode {hostId.Value}.");
+            _log($"{GetActionVerb(action)} failed: no InfoNode found for InfoNode {hostId.Value}.");
             return;
         }
 
@@ -82,7 +82,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
             var selectedIds = ResolveDuplicateSelection(matches, hostId.Value, action);
             if (selectedIds.Count == 0)
             {
-                _log($"{GetActionVerb(action)} avbrutt for Infonode {hostId.Value}.");
+                _log($"{GetActionVerb(action)} canceled for InfoNode {hostId.Value}.");
                 return;
             }
 
@@ -91,9 +91,9 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
                 uiDoc.ShowElements(selectedIds);
 
             if (selectedIds.Count > 1)
-                _log($"{GetActionVerb(action)} {selectedIds.Count} dupliserte InfoNoder for Infonode {hostId.Value}.");
+                _log($"{GetActionVerb(action)} {selectedIds.Count} duplicate InfoNodes for InfoNode {hostId.Value}.");
             else
-                _log($"{GetActionVerb(action)} InfoNode {selectedIds.First().Value} for Infonode {hostId.Value}.");
+                _log($"{GetActionVerb(action)} InfoNode {selectedIds.First().Value} for InfoNode {hostId.Value}.");
 
             return;
         }
@@ -103,19 +103,19 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         if (action == HostUiActionType.JumpTo)
             uiDoc.ShowElements(instance.Id);
 
-        _log($"{GetActionVerb(action)} InfoNode {instance.Id.Value} for Infonode {hostId.Value}.");
+        _log($"{GetActionVerb(action)} InfoNode {instance.Id.Value} for InfoNode {hostId.Value}.");
     }
 
     public string GetName() => "InfoNode UI External Event Handler";
 
     private static string GetActionVerb(HostUiActionType action)
     {
-        return action == HostUiActionType.JumpTo ? "Gå til" : "Valgt";
+        return action == HostUiActionType.JumpTo ? "Jumped to" : "Selected";
     }
 
     private static string GetActionLabel(HostUiActionType action)
     {
-        return action == HostUiActionType.JumpTo ? "gå til" : "velge";
+        return action == HostUiActionType.JumpTo ? "jump to" : "select";
     }
 
     private static List<ElementId> ResolveDuplicateSelection(List<FamilyInstance> matches, int hostId, HostUiActionType action)
@@ -142,7 +142,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
 
         var primaryButton = new System.Windows.Controls.Button
         {
-            Content = action == HostUiActionType.JumpTo ? "Gå til valgt" : "Velg",
+            Content = action == HostUiActionType.JumpTo ? "Jump to selected" : "Select",
             MinWidth = 120,
             Margin = new System.Windows.Thickness(0, 0, 8, 0),
             IsDefault = true
@@ -150,14 +150,14 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
 
         var secondaryButton = new System.Windows.Controls.Button
         {
-            Content = action == HostUiActionType.JumpTo ? "Gå til alle" : "Velg alle",
+            Content = action == HostUiActionType.JumpTo ? "Jump to all" : "Select all",
             MinWidth = 120,
             Margin = new System.Windows.Thickness(0, 0, 8, 0)
         };
 
         var cancelButton = new System.Windows.Controls.Button
         {
-            Content = "Avbryt",
+            Content = "Cancel",
             MinWidth = 90,
             IsCancel = true
         };
@@ -175,7 +175,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         var mainPanel = new System.Windows.Controls.DockPanel();
         var messageText = new System.Windows.Controls.TextBlock
         {
-            Text = $"Infonode {hostId} har {items.Count} InfoNoder med samme Infonode-ID. Velg hva du vil {GetActionLabel(action)}:",
+            Text = $"InfoNode {hostId} has {items.Count} InfoNodes with the same InfoNode ID. Choose what you want to {GetActionLabel(action)}:",
             Margin = new System.Windows.Thickness(10, 10, 10, 0),
             TextWrapping = System.Windows.TextWrapping.Wrap
         };
@@ -187,7 +187,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
 
         var window = new System.Windows.Window
         {
-            Title = "Dupliserte InfoNoder oppdaget",
+            Title = "Duplicate InfoNodes detected",
             Width = 760,
             Height = 420,
             ResizeMode = System.Windows.ResizeMode.CanResize,
@@ -232,7 +232,7 @@ internal sealed class InfoNodeUiExternalEventHandler : IExternalEventHandler
         panelFactory.SetValue(System.Windows.FrameworkElement.MarginProperty, new System.Windows.Thickness(2));
 
         panelFactory.AppendChild(CreateColumnText("ID: ", nameof(DuplicateInfoNodeItem.ElementId), true));
-        panelFactory.AppendChild(CreateColumnText(" Navn: ", nameof(DuplicateInfoNodeItem.Name), false));
+        panelFactory.AppendChild(CreateColumnText(" Name: ", nameof(DuplicateInfoNodeItem.Name), false));
         panelFactory.AppendChild(CreateColumnText(" Tag: ", nameof(DuplicateInfoNodeItem.Tag), false));
         panelFactory.AppendChild(CreateColumnText(" Mod: ", nameof(DuplicateInfoNodeItem.Modname), false));
 

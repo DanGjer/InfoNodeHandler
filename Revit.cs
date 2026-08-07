@@ -181,10 +181,9 @@ public class Revit
         return instances;
     }
 
-    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, List<string>? ignoredRevitLinks = null, bool includeLocalModel = false)
+    public static List<RevitInstance> CollectAllInstancesFromLinkedModels(Document doc, List<string> occurrenceIdParameterNames, bool includeLocalModel = false)
     {
         var allInstances = new List<RevitInstance>();
-        var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
 
         if (includeLocalModel)
         {
@@ -218,9 +217,6 @@ public class Revit
 
         foreach (var linkInstance in linkInstances)
         {
-            if (ignoredLinkSet.Contains(linkInstance.Name))
-                continue;
-
             var doclink = linkInstance.GetLinkDocument();
             if (doclink == null)
                 continue;
@@ -333,12 +329,12 @@ public class Revit
                 }
                 if (!dryRun)
                 {
-                    SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "No data" : host.ItemData1 ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
                     
                     // Update phase if specified
@@ -384,12 +380,12 @@ public class Revit
             }
 
             var newInstance = doc.Create.NewFamilyInstance(host.Position, symbol, StructuralType.NonStructural);
-            SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "Ingen data" : host.ItemData1 ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "No data" : host.ItemData1 ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "No data");
+            SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "No data");
             SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
             
             // Set phase if specified
@@ -428,7 +424,7 @@ public class Revit
         var param = element.LookupParameter(paramName);
         if (param != null && !param.IsReadOnly && param.StorageType == StorageType.String)
         {
-            param.Set(value ?? "Ingen data");
+            param.Set(value ?? "No data");
         }
 
     }
@@ -494,42 +490,6 @@ public class Revit
 
         
     
-}
-
-public class RevitLinkInstanceAutoFillCollector : IRevitAutoFillCollector<AssistantArgs>
-{
-    public Dictionary<string, string> Get(UIApplication uiApplication, AssistantArgs args)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        try
-        {
-            var doc = uiApplication.ActiveUIDocument?.Document;
-            if (doc == null)
-            {
-                return result;
-            }
-
-            var links = new FilteredElementCollector(doc)
-                .OfClass(typeof(RevitLinkInstance))
-                .Cast<RevitLinkInstance>()
-                .Select(link => link.Name)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var linkName in links)
-            {
-                result[linkName] = linkName;
-            }
-        }
-        catch (Exception ex)
-        {
-            result[string.Empty] = $"Failed to collect Revit links: {ex.Message}";
-        }
-
-        return result;
-    }
 }
 
 public class DrofusSubCategoryAutoFillCollector : IRevitAutoFillCollector<AssistantArgs>

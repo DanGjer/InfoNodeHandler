@@ -185,17 +185,10 @@ public class Requirements
             }
     }
 
-    public static string ModelChecker(Document doc, List<string>? ignoredRevitLinks = null)
+    public static string ModelChecker(Document doc)
     {
         // 1. Collect all loaded link model names from "model_name_drofus" and file names (for IFCs)
         var loadedModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ignoredModelNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ignoredLinkSet = new HashSet<string>(ignoredRevitLinks ?? [], StringComparer.OrdinalIgnoreCase);
-
-        foreach (var ignoredLinkName in ignoredLinkSet)
-        {
-            AddLinkNameCandidates(ignoredModelNames, ignoredLinkName);
-        }
 
         var linkInstances = new FilteredElementCollector(doc)
             .OfClass(typeof(RevitLinkInstance))
@@ -237,13 +230,6 @@ public class Requirements
                 continue;
             }
 
-            if (ignoredLinkSet.Contains(instance.Name))
-            {
-                AddLinkNameCandidates(ignoredModelNames, instance.Name);
-                ignoredModelNames.Add(modelName);
-                continue;
-            }
-
             loadedModelNames.Add(modelName);
         }
 
@@ -262,9 +248,8 @@ public class Requirements
 
             var modName = modNameParam.AsString();
             
-            // Skip check if modname is "Ingen data" (placeholder for missing data)
-            if (modName == "Ingen data") continue;
-            if (!string.IsNullOrWhiteSpace(modName) && ignoredModelNames.Contains(modName)) continue;
+            // Skip check for placeholder values used for missing data.
+            if (modName == "No data" || modName == "Ingen data") continue;
             
             if (!string.IsNullOrWhiteSpace(modName) && !loadedModelNames.Contains(modName))
             {
@@ -275,33 +260,5 @@ public class Requirements
 
         // All InfoNodes reference loaded models
         return "";
-    }
-
-    private static void AddLinkNameCandidates(HashSet<string> names, string? linkName)
-    {
-        if (string.IsNullOrWhiteSpace(linkName))
-        {
-            return;
-        }
-
-        var trimmedName = linkName.Trim();
-        names.Add(trimmedName);
-
-        var baseName = trimmedName;
-        var colonIndex = baseName.IndexOf(':');
-        if (colonIndex >= 0)
-        {
-            baseName = baseName.Substring(0, colonIndex).Trim();
-            if (!string.IsNullOrWhiteSpace(baseName))
-            {
-                names.Add(baseName);
-            }
-        }
-
-        if (baseName.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
-            baseName.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
-        {
-            names.Add(baseName.Substring(0, baseName.Length - 4));
-        }
     }
 }
