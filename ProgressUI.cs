@@ -535,7 +535,7 @@ namespace InfoNodeHandler
 
                 workbook.SaveAs(saveDialog.FileName);
 
-                AppendLog($"Exported {totalRows} InfoNodes across 4 sheets to: {saveDialog.FileName}");
+                AppendLog($"Exported {totalRows} InfoNodes in 4 sheets to: {saveDialog.FileName}");
             }
             catch (Exception ex)
             {
@@ -553,7 +553,7 @@ namespace InfoNodeHandler
             worksheet.Cell(1, 4).Value = "Tag";
             worksheet.Cell(1, 5).Value = "SubItems";
             worksheet.Cell(1, 6).Value = "IsDuplicate";
-            worksheet.Cell(1, 7).Value = "DuplicateExplanation";
+            worksheet.Cell(1, 7).Value = "DuplicateWarning";
             worksheet.Cell(1, 8).Value = "SubItemDetails";
 
             for (int i = 0; i < rows.Count; i++)
@@ -704,14 +704,14 @@ namespace InfoNodeHandler
             buttonFactory.SetValue(Button.ForegroundProperty, _themeAccent);
             buttonFactory.SetValue(Button.BorderBrushProperty, _themeAccent);
             buttonFactory.SetValue(Button.BorderThicknessProperty, new Thickness(1));
-            buttonFactory.SetBinding(Button.ContentProperty, new System.Windows.Data.Binding(nameof(HostListItem.SubItems)) { StringFormat = "View ({0})" });
+            buttonFactory.SetBinding(Button.ContentProperty, new System.Windows.Data.Binding(nameof(HostListItem.SubItems)) { StringFormat = "Show ({0})" });
             buttonFactory.AddHandler(Button.ClickEvent, new RoutedEventHandler(OnSubItemsClicked));
 
             var template = new DataTemplate { VisualTree = buttonFactory };
 
             return new DataGridTemplateColumn
             {
-                Header = "Subitems",
+                Header = "Sub-items",
                 CellTemplate = template,
                 Width = new DataGridLength(0.8, DataGridLengthUnitType.Star)
             };
@@ -747,11 +747,11 @@ namespace InfoNodeHandler
                 return property?.GetValue(item)?.ToString() ?? string.Empty;
             }
 
-            // "Subitems" is a template column that shows count via a button label.
+            // "Sub-items" is a template column that shows count via a button label.
             if (cell.Column?.DisplayIndex == 4)
                 return item.SubItems ?? string.Empty;
 
-            // Action button columns (Select/Jump) intentionally do not expose copy value.
+            // Action button columns (Select/Go to) intentionally do not expose copy value.
             return string.Empty;
         }
 
@@ -762,7 +762,7 @@ namespace InfoNodeHandler
 
             if (item.SubItemDetails == null || item.SubItemDetails.Count == 0)
             {
-                AppendLog($"No subitems found for InfoNode {item.DrofusOccurrenceId}.");
+                AppendLog($"No sub-items found for InfoNode {item.DrofusOccurrenceId}.");
                 return;
             }
 
@@ -781,7 +781,7 @@ namespace InfoNodeHandler
             var infoText = new TextBlock
             {
                 Margin = new Thickness(10, 10, 10, 0),
-                Text = $"{item.SubItemDetails.Count} subitems for InfoNode {item.DrofusOccurrenceId}",
+                Text = $"{item.SubItemDetails.Count} sub-items for InfoNode {item.DrofusOccurrenceId}",
                 Foreground = _themeTextPrimary,
                 TextWrapping = TextWrapping.Wrap
             };
@@ -814,7 +814,7 @@ namespace InfoNodeHandler
 
             var dialog = new Window
             {
-                Title = $"Subitems - InfoNode {item.DrofusOccurrenceId}",
+                Title = $"Sub-items - InfoNode {item.DrofusOccurrenceId}",
                 Width = 700,
                 Height = 500,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,

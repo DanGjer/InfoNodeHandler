@@ -219,8 +219,10 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 );
             }
 
+            var selectFields = new[] { "Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostData1, args.ParamHostData2, "parent_occurrence_id_classification_number", args.ParamHostData3, args.ParamHostData4, args.ParamHostData5 }
+                .Where(f => !string.IsNullOrWhiteSpace(f)).ToArray();
             var querySubs = Query.List()
-                .Select("Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostItemData1, args.ParamHostItemData2, "parent_occurrence_id_classification_number")
+                .Select(selectFields)
                 .Filter(filterSelect);
                 
 
@@ -243,8 +245,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 HostOccId = int.TryParse(occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_id")?.ToString(), out var hostId) ? hostId : 0,
                 HostOccModname = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostOccModelName)?.ToString(),
                 HostItemName = occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_article_id_name")?.ToString(),
-                HostOccDyn1 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostItemData1)?.ToString(),
-                HostItemDyn2 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostItemData2)?.ToString(),
+                HostData1 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData1)?.ToString(),
+                HostData2 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData2)?.ToString(),
+                HostData3 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData3)?.ToString(),
+                HostData4 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData4)?.ToString(),
+                HostData5 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData5)?.ToString(),
                 HostOccTag = occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_classification_number")?.ToString()
             }).ToList();
 
@@ -253,8 +258,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             {
                 HostOccID = group.Key,
                 HostItemName = group.First().HostItemName,
-                HostItemData1 = group.First().HostOccDyn1?.ToString(),
-                HostItemData2 = group.First().HostItemDyn2?.ToString(),
+                HostData1 = group.First().HostData1?.ToString(),
+                HostData2 = group.First().HostData2?.ToString(),
+                HostData3 = group.First().HostData3?.ToString(),
+                HostData4 = group.First().HostData4?.ToString(),
+                HostData5 = group.First().HostData5?.ToString(),
                 HostOccTag = group.First().HostOccTag,
                 HostOccModname = group.First().HostOccModname?.ToString(),
                 RevitModname = group.First().RevitModname,
@@ -286,8 +294,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                         DrofusOccurrenceId = instance.DrofusOccurrenceId,
                         Position = instance.Position,
                         ItemName = matchingHost.HostItemName,
-                        ItemData1 = matchingHost.HostItemData1,
-                        ItemData2 = matchingHost.HostItemData2,
+                        ItemData1 = matchingHost.HostData1,
+                        ItemData2 = matchingHost.HostData2,
+                        ItemData3 = matchingHost.HostData3,
+                        ItemData4 = matchingHost.HostData4,
+                        ItemData5 = matchingHost.HostData5,
                         Tag = matchingHost.HostOccTag,
                         Modname = string.IsNullOrWhiteSpace(matchingHost.HostOccModname) ? matchingHost.RevitModname : matchingHost.HostOccModname,
                         SubItems = matchingHost.SubItems,

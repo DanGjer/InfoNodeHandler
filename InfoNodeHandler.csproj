@@ -32,24 +32,6 @@
     <PackageReference Include="dRofusClient" Version="1.0.11" />
     <PackageReference Include="System.Text.Json" Version="9.0.3" />
   </ItemGroup>
-  <!-- Added reference to System.Net.Http -->
-  <ItemGroup>
-    <Reference Include="System.Net.Http">
-      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Net.Http.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-  <Reference Include="RevitAPI">
-    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
-    <Private>false</Private>
-  </Reference>
-  <Reference Include="RevitAPIUI">
-    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
-    <Private>false</Private>
-  </Reference>
-  </ItemGroup>
 
     <ItemGroup>
     

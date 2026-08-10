@@ -268,6 +268,9 @@ public class Revit
         public string? ItemName {get;set;}
         public string? ItemData1 {get;set;}
         public string? ItemData2 {get;set;}
+        public string? ItemData3 {get;set;}
+        public string? ItemData4 {get;set;}
+        public string? ItemData5 {get;set;}
         public string? Tag {get;set;}
         public string? Modname { get; set; }
         public ActualHostStatus Status { get; set; }
@@ -382,8 +385,11 @@ public class Revit
             var newInstance = doc.Create.NewFamilyInstance(host.Position, symbol, StructuralType.NonStructural);
             SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "No data");
             SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "No data");
-            SetStringParam(newInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "No data" : host.ItemData1 ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata", host.ItemData1?.ToString() ?? "No data");
             SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "No data");
             SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "No data");
             SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "No data");
             SetStringParam(newInstance, "InfoNode_subs", subItemSummary);

@@ -5,7 +5,7 @@
   <DebugType>portable</DebugType>
   <Nullable>enable</Nullable>
   <NoWarn>NU1701</NoWarn>
-  <Configurations>Debug;Debug 2025;Release 2025</Configurations>
+    <Configurations>Debug;Debug 2025;Debug 2026;Release 2025;Release 2026</Configurations>
  </PropertyGroup>
 
  <Choose>
@@ -107,7 +107,7 @@
    <IncludeAssets>compile</IncludeAssets>
   </PackageReference>
 
-  <PackageReference Include="CW.Assistant.Extensions.Revit.$(MainRevitVersion)" Version="5.65.3">
+    <PackageReference Include="CW.Assistant.Extensions.Revit.$(MainRevitVersion)" Version="5.83.0">
    <PrivateAssets>all</PrivateAssets>
    <IncludeAssets>compile</IncludeAssets>
   </PackageReference>
