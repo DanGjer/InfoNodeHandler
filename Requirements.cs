@@ -111,12 +111,15 @@ public class Requirements
     {
         string[] paramNames = {
             "InfoNode_hostdata",
+            "InfoNode_hostdata2",
+            "InfoNode_hostdata3",
+            "InfoNode_hostdata4",
+            "InfoNode_hostdata5",
             "InfoNode_hostID",
             "InfoNode_hostname",
             "InfoNode_hosttag",
             "InfoNode_modname",
-            "InfoNode_subs",
-            "InfoNode_hostdata2"
+            "InfoNode_subs"
         };
 
             // Get the InfoNode family

@@ -9,8 +9,11 @@ public class DrofusOccurrence
     public string? HostOccModname { get; set; }
     public string? RevitModname { get; set; }
     public string? HostItemName { get; set; }
-    public string? HostOccDyn1 { get; set; }
-    public string? HostItemDyn2 { get; set; }
+    public string? HostData1 { get; set; }
+    public string? HostData2 { get; set; }
+    public string? HostData3 { get; set; }
+    public string? HostData4 { get; set; }
+    public string? HostData5 { get; set; }
     public string? HostOccTag { get; set; }
 }
 
@@ -18,8 +21,11 @@ public class DrofusHost
 {
     public int HostOccID { get; set; }
     public string? HostItemName { get; set; }
-    public string? HostItemData1 { get; set; }
-    public string? HostItemData2 { get; set; }
+    public string? HostData1 { get; set; }
+    public string? HostData2 { get; set; }
+    public string? HostData3 { get; set; }
+    public string? HostData4 { get; set; }
+    public string? HostData5 { get; set; }
     public string? HostOccTag { get; set; }
     public string? HostOccModname { get; set; }
     public string? RevitModname { get; set; }
