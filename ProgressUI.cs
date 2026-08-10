@@ -240,8 +240,8 @@ namespace InfoNodeHandler
             _hostsGrid.Columns.Add(CreateFilterableColumn("Mod", nameof(HostListItem.Mod), 1.4, _modFilter));
             _hostsGrid.Columns.Add(CreateFilterableColumn("Tag", nameof(HostListItem.Tag), 1.4, _tagFilter));
             _hostsGrid.Columns.Add(CreateSubItemsButtonColumn());
-            _hostsGrid.Columns.Add(CreateActionButtonColumn("Velg", "Velg", OnSelectHostClicked));
-            _hostsGrid.Columns.Add(CreateActionButtonColumn("Gå til", "Gå til", OnJumpToHostClicked));
+            _hostsGrid.Columns.Add(CreateActionButtonColumn("Select", "Select", OnSelectHostClicked));
+            _hostsGrid.Columns.Add(CreateActionButtonColumn("Jump", "Jump", OnJumpToHostClicked));
 
             var rowStyle = new Style(typeof(DataGridRow));
             rowStyle.Setters.Add(new Setter(System.Windows.Controls.Control.BackgroundProperty, _themePanel));
@@ -422,7 +422,7 @@ namespace InfoNodeHandler
 
             _hostsHint.Text = _allHostsProvider == null
                 ? "No InfoNodes available"
-                : "InfoNodes are available after the run is complete.";
+                : "InfoNodes are available after the run is completed.";
         }
 
         private void PopulateHostsList(Func<IEnumerable<HostListItem>>? hostsProvider, string label)
@@ -521,7 +521,7 @@ namespace InfoNodeHandler
 
             if (saveDialog.ShowDialog() != true)
             {
-                AppendLog("Export cancelled.");
+                AppendLog("Export canceled.");
                 return;
             }
 

@@ -251,8 +251,9 @@ public class Requirements
 
             var modName = modNameParam.AsString();
             
-            // Skip check if modname is "No data" (placeholder for missing data)
-            if (modName == "No data") continue;
+            // Skip check for placeholder values used for missing data.
+            if (modName == "No data" || modName == "Ingen data") continue;
+            
             if (!string.IsNullOrWhiteSpace(modName) && !loadedModelNames.Contains(modName))
             {
                 // Found an InfoNode referencing a model that is not loaded
@@ -262,33 +263,5 @@ public class Requirements
 
         // All InfoNodes reference loaded models
         return "";
-    }
-
-    private static void AddLinkNameCandidates(HashSet<string> names, string? linkName)
-    {
-        if (string.IsNullOrWhiteSpace(linkName))
-        {
-            return;
-        }
-
-        var trimmedName = linkName.Trim();
-        names.Add(trimmedName);
-
-        var baseName = trimmedName;
-        var colonIndex = baseName.IndexOf(':');
-        if (colonIndex >= 0)
-        {
-            baseName = baseName.Substring(0, colonIndex).Trim();
-            if (!string.IsNullOrWhiteSpace(baseName))
-            {
-                names.Add(baseName);
-            }
-        }
-
-        if (baseName.EndsWith(".rvt", StringComparison.OrdinalIgnoreCase) ||
-            baseName.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
-        {
-            names.Add(baseName.Substring(0, baseName.Length - 4));
-        }
     }
 }

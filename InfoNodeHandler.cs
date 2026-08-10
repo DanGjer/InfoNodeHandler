@@ -50,7 +50,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
     private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host, HashSet<int>? duplicateIds = null)
     {
         var subItemDetails = (host.SubItems ?? new List<DrofusOccurrence>())
-            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(no name)" : s.SubItemName)}")
+            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(unnamed)" : s.SubItemName)}")
             .ToList();
 
         bool isDuplicate = duplicateIds != null
@@ -139,14 +139,14 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 {
                     if (!int.TryParse(item.DrofusOccurrenceId, out var hostId))
                     {
-                        progressUI.AppendLog($"Go to failed: invalid InfoNode ID '{item.DrofusOccurrenceId}'.");
+                        progressUI.AppendLog($"Jump failed: invalid InfoNode ID '{item.DrofusOccurrenceId}'.");
                         return;
                     }
 
                     uiEventHandler.Queue(hostId, HostUiActionType.JumpTo);
                     var request = uiExternalEvent.Raise();
                     if (request != ExternalEventRequest.Accepted)
-                        progressUI.AppendLog($"Go to request for InfoNode {hostId} was not accepted ({request}).");
+                        progressUI.AppendLog($"Jump request for InfoNode {hostId} was not accepted ({request}).");
                 });
 
             progressUI.AppendLog("Checking requirements...");
@@ -154,13 +154,13 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             bool pathcheckerResult = Requirements.PathChecker();
             if (!pathcheckerResult)
             {
-                progressUI.AppendLog("Error: Paths to required files not found.");
-                return Result.Text.Failed("Path to required InfoNode family or shared parameter file not found.");
+                progressUI.AppendLog("Error: Required file paths were not found.");
+                return Result.Text.Failed("Path to required InfoNode family or shared parameter file was not found.");
             }
 
             if (!Requirements.FamilyChecker(document))
             {
-                progressUI.AppendLog("Family not found, attempting to import...");
+                progressUI.AppendLog("Family not found, attempting import...");
                 if (!Requirements.FamilyImporter(document, out var importError))
                 {
                     var reason = string.IsNullOrWhiteSpace(importError)
@@ -174,17 +174,17 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 if (!Requirements.FamilyChecker(document))
                 {
                     progressUI.AppendLog("Error: Family still not found after import.");
-                    return Result.Text.Failed("Required InfoNode family not found in model after attempted import.");
+                    return Result.Text.Failed("Required InfoNode family does not exist in the model after attempted import.");
                 }
 
-                progressUI.AppendLog("Family imported successfully.");
+                progressUI.AppendLog("Family import succeeded.");
             }
 
             progressUI.AppendLog("Checking parameters...");
             string parameterCheckerResult = Requirements.ParameterChecker(document);
             if (!string.IsNullOrEmpty(parameterCheckerResult))
             {
-                progressUI.AppendLog("Error: Parameters missing.");
+                progressUI.AppendLog("Error: Parameters are missing.");
                 return Result.Text.Failed($"One or more required parameters are missing from the project:\n{parameterCheckerResult}");
             }
 
@@ -199,11 +199,11 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             progressUI.AppendLog("Requirements OK");
             if (args.SubFilter == null || args.SubFilter.Count == 0)
             {
-                progressUI.AppendLog("No filter set, fetching all sub-items from dRofus");
+                progressUI.AppendLog("No filter set, fetching all subitems from dRofus");
             }
             else
             {
-                progressUI.AppendLog("Filtering on: " + string.Join(", ", args.SubFilter));
+                progressUI.AppendLog("Filtering by: " + string.Join(", ", args.SubFilter));
             }
             progressUI.AppendLog("Fetching occurrences from dRofus...");
 
@@ -230,7 +230,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             progressUI.AppendLog($"Fetched {allOccurrences.Count()} occurrences.");
             if (allOccurrences.Count() == 0)
             {
-                progressUI.AppendLog("Nothing found in dRofus, check the filter");
+                progressUI.AppendLog("No results found in dRofus, check the filter");
                 return Result.Text.Failed("Check filter");
             }
 
@@ -353,7 +353,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                             progressUI.AppendLog($"Error: Could not edit InfoNode {host.DrofusOccurrenceId}.");
                             progressUI.AppendLog($"Reason: {ex.Message}");
                             progressUI.AppendLog("Please ask a colleague to sync...");
-                            return Result.Text.Failed($"Ownership conflict: {ex.Message}\n\nPlease ask a colleague to synchronize or request edit access to InfoNode {host.DrofusOccurrenceId}.");
+                            return Result.Text.Failed($"Ownership lock: {ex.Message}\n\nPlease ask a colleague to sync or request edit access to InfoNode {host.DrofusOccurrenceId}.");
                         }
                     }
 
@@ -361,13 +361,13 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     if (ownershipFailurePreprocessor.HasOwnershipFailure || commitStatus != TransactionStatus.Committed)
                     {
                         var reason = string.IsNullOrWhiteSpace(ownershipFailurePreprocessor.FailureDescription)
-                            ? "Revit aborted the transaction due to access/ownership conflict."
+                            ? "Revit aborted the transaction due to access/ownership."
                             : ownershipFailurePreprocessor.FailureDescription;
 
                         progressUI.AppendLog("Error: Could not complete placement/update because one or more elements are locked by another user.");
                         progressUI.AppendLog($"Reason: {reason}");
                         progressUI.AppendLog("Ask a colleague to sync...");
-                        return Result.Text.Failed($"Ownership conflict: {reason}\n\nPlease ask a colleague to synchronize or request edit access.");
+                        return Result.Text.Failed($"Ownership lock: {reason}\n\nPlease ask a colleague to sync or request edit access.");
                     }
 
                     progressUI.AppendLog($"Placed/updated {processed} InfoNodes.");
@@ -391,8 +391,8 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                     {
                         progressUI.AppendLog($"Error: Could not edit InfoNode {host.DrofusOccurrenceId}.");
                         progressUI.AppendLog($"Reason: {ex.Message}");
-                        progressUI.AppendLog("Please ask a colleague to synchronize or request edit access.");
-                        return Result.Text.Failed($"Ownership conflict: {ex.Message}\n\nPlease ask a colleague to synchronize or request edit access to InfoNode {host.DrofusOccurrenceId}.");
+                        progressUI.AppendLog("Please ask a colleague to sync or request edit access.");
+                        return Result.Text.Failed($"Ownership lock: {ex.Message}\n\nPlease ask a colleague to sync or request edit access to InfoNode {host.DrofusOccurrenceId}.");
                     }
                 }
                 progressUI.AppendLog($"Dry run: evaluated {processed} InfoNodes.");
@@ -427,7 +427,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             string dryRunPrefix = args.DryRun ? "[DRY RUN] " : "";
             string summarySuccess = ($"{dryRunPrefix}Success!\n\nCreated {createdCount} InfoNodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} InfoNodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} InfoNodes\n\nDeleted {deletedCount} InfoNodes");
-            string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move operations on every run.\nDuplicate IDs: \n({String.Join(", ", duplicateIDs)})\nDuplicate names: \n({String.Join(", ", duplicateNames)})\n\nCreated {createdCount} InfoNodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} InfoNodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} InfoNodes\nDeleted {deletedCount} InfoNodes");
+            string summaryPartial = ($"{dryRunPrefix}Duplicates detected!\nThese duplicates exist in one of the linked models and confuse the script, triggering move operations on every run\nDuplicate IDs: \n({String.Join(", ", duplicateIDs)})\nDuplicate names: \n({String.Join(", ", duplicateNames)})\n\nCreated {createdCount} InfoNodes for these hosts: \n({String.Join(", ", createdIDs)})\nHost names: \n({String.Join(", ", createdNames)})\n\nMoved {movedCount} InfoNodes for these hosts: \n({String.Join(", ", movedIDs)})\nHost names: \n({String.Join(", ", movedNames)})\n\nUpdated {updatedCount} InfoNodes\nDeleted {deletedCount} InfoNodes");
 
             progressUI.AppendLog("Completed.");
 
