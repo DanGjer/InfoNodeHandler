@@ -251,8 +251,8 @@ public class Requirements
 
             var modName = modNameParam.AsString();
             
-            // Skip check if modname is "Ingen data" (placeholder for missing data)
-            if (modName == "Ingen data") continue;
+            // Skip check if modname is "No data" (placeholder for missing data)
+            if (modName == "No data") continue;
             if (!string.IsNullOrWhiteSpace(modName) && !loadedModelNames.Contains(modName))
             {
                 // Found an InfoNode referencing a model that is not loaded

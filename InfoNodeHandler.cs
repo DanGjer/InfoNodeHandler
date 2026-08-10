@@ -50,7 +50,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
     private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host, HashSet<int>? duplicateIds = null)
     {
         var subItemDetails = (host.SubItems ?? new List<DrofusOccurrence>())
-            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(uten navn)" : s.SubItemName)}")
+            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(no name)" : s.SubItemName)}")
             .ToList();
 
         bool isDuplicate = duplicateIds != null
@@ -67,7 +67,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             SubItemDetails = subItemDetails,
             IsDuplicate = isDuplicate,
             DuplicateWarning = isDuplicate
-                ? "Dette elementet er et duplikat og forårsaker gjentatte move-operasjoner ved hver kjøring."
+                ? "This element is a duplicate and causes repeated move operations on every run."
                 : string.Empty
         };
     }

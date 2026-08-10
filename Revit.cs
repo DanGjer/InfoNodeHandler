@@ -332,15 +332,15 @@ public class Revit
                 }
                 if (!dryRun)
                 {
-                    SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata", host.ItemData1?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-                    SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+                    SetStringParam(existingInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata", host.ItemData1?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
                     
                     // Update phase if specified
@@ -386,15 +386,15 @@ public class Revit
             }
 
             var newInstance = doc.Create.NewFamilyInstance(host.Position, symbol, StructuralType.NonStructural);
-            SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata", host.ItemData1?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "Ingen data");
-            SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "Ingen data");
+            SetStringParam(newInstance, "InfoNode_hostID", host.DrofusOccurrenceId.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostname", host.ItemName ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata", host.ItemData1?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "No data");
+            SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "No data");
+            SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "No data");
             SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
             
             // Set phase if specified
@@ -433,7 +433,7 @@ public class Revit
         var param = element.LookupParameter(paramName);
         if (param != null && !param.IsReadOnly && param.StorageType == StorageType.String)
         {
-            param.Set(value ?? "Ingen data");
+            param.Set(value ?? "No data");
         }
 
     }
