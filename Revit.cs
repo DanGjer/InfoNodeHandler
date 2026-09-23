@@ -336,6 +336,9 @@ public class Revit
                     SetStringParam(existingInstance, "InfoNode_hostname", host.ItemName ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_hostdata", string.IsNullOrWhiteSpace(host.ItemData1) || host.ItemData1 == "0" ? "No data" : host.ItemData1 ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_hostdata2", host.ItemData2?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata3", host.ItemData3?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata4", host.ItemData4?.ToString() ?? "No data");
+                    SetStringParam(existingInstance, "InfoNode_hostdata5", host.ItemData5?.ToString() ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
