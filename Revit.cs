@@ -306,7 +306,7 @@ public class Revit
             return idParam != null && idParam.AsString() == host.DrofusOccurrenceId.ToString();
         });
 
-        string subItemSummary = host.SubItems != null ? string.Join(" | ", host.SubItems.Select(s => $"{s.SubOccId},{s.SubItemName}")) : string.Empty;
+        string subItemSummary = host.SubItems != null ? string.Join(" | ", host.SubItems.Select(s => $"{s.SubOccId},{s.SubItemName}({s.SubIdNumber})")) : string.Empty;
 
         
 
