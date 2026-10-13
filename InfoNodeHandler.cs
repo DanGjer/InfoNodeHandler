@@ -355,6 +355,14 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                             progressUI.AppendLog("Please ask a colleague to sync...");
                             return Result.Text.Failed($"Ownership lock: {ex.Message}\n\nPlease ask a colleague to sync or request edit access to InfoNode {host.DrofusOccurrenceId}.");
                         }
+                        catch (Exception ex)
+                        {
+                            tx.RollBack();
+                            progressUI.AppendLog($"Error: Could not place or update InfoNode {host.DrofusOccurrenceId}.");
+                            progressUI.AppendLog($"Exception: {ex.GetType().Name}: {ex.Message}");
+                            progressUI.AppendLog($"Use the Jump action for InfoNode {host.DrofusOccurrenceId} to inspect the element, then resolve the issue in Revit.");
+                            return Result.Text.Failed($"Could not place or update InfoNode {host.DrofusOccurrenceId}: {ex.Message}");
+                        }
                     }
 
                     var commitStatus = tx.Commit();
@@ -393,6 +401,13 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                         progressUI.AppendLog($"Reason: {ex.Message}");
                         progressUI.AppendLog("Please ask a colleague to sync or request edit access.");
                         return Result.Text.Failed($"Ownership lock: {ex.Message}\n\nPlease ask a colleague to sync or request edit access to InfoNode {host.DrofusOccurrenceId}.");
+                    }
+                    catch (Exception ex)
+                    {
+                        progressUI.AppendLog($"Error: Could not place or update InfoNode {host.DrofusOccurrenceId}.");
+                        progressUI.AppendLog($"Exception: {ex.GetType().Name}: {ex.Message}");
+                        progressUI.AppendLog($"Use the Jump action for InfoNode {host.DrofusOccurrenceId} to inspect the element, then resolve the issue in Revit.");
+                        return Result.Text.Failed($"Could not place or update InfoNode {host.DrofusOccurrenceId}: {ex.Message}");
                     }
                 }
                 progressUI.AppendLog($"Dry run: evaluated {processed} InfoNodes.");
@@ -434,6 +449,12 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
             return duplicateIDs.Count > 0
                 ? Result.Text.PartiallySucceeded(summaryPartial)
                 : Result.Text.Succeeded(summarySuccess);
+        }
+        catch (Exception ex)
+        {
+            progressUI.AppendLog($"Error: {ex.GetType().Name}: {ex.Message}");
+            progressUI.AppendLog("The operation failed. Review the error above and use the available InfoNode actions to inspect affected elements.");
+            return Result.Text.Failed(ex.Message);
         }
         finally
         {
