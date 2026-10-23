@@ -50,7 +50,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
     private static ProgressUI.HostListItem ToHostListItem(Revit.ActualRevitHost host, HashSet<int>? duplicateIds = null)
     {
         var subItemDetails = (host.SubItems ?? new List<DrofusOccurrence>())
-            .Select(s => $"{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(unnamed)" : s.SubItemName)}")
+            .Select(s => $"{new string(' ', Math.Max(0, s.Depth - 1) * 2)}{(string.IsNullOrWhiteSpace(s.SubIdNumber) ? "-" : s.SubIdNumber)} | {(string.IsNullOrWhiteSpace(s.SubItemName) ? "(unnamed)" : s.SubItemName)}")
             .ToList();
 
         bool isDuplicate = duplicateIds != null
@@ -70,6 +70,55 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 ? "This element is a duplicate and causes repeated move operations on every run."
                 : string.Empty
         };
+    }
+
+    private static string FormatNestedSubItem(DrofusOccurrence item, string? rootHostName)
+    {
+        var parentName = string.IsNullOrWhiteSpace(item.HostItemName) ? "(unnamed)" : item.HostItemName;
+        rootHostName = string.IsNullOrWhiteSpace(rootHostName) ? "(unnamed)" : rootHostName;
+        return $"{item.SubOccId},{item.SubItemName}({item.SubIdNumber})[parent={item.HostOccId}:{parentName};root={item.RootHostOccId}:{rootHostName}]";
+    }
+
+    private static string FormatTreeItem(DrofusOccurrence item)
+    {
+        var name = string.IsNullOrWhiteSpace(item.SubItemName) ? "(unnamed)" : item.SubItemName;
+        var number = string.IsNullOrWhiteSpace(item.SubIdNumber) ? "-" : item.SubIdNumber;
+        return $"{name} ({number}) [{item.SubOccId}]";
+    }
+
+    private static string BuildSubItemTree(int rootHostId, IReadOnlyList<DrofusOccurrence> allItems, IReadOnlyList<DrofusOccurrence> listedItems)
+    {
+        var itemsById = allItems.ToDictionary(item => item.SubOccId);
+        var itemsByParent = allItems.GroupBy(item => item.HostOccId).ToDictionary(group => group.Key, group => group.ToList());
+        var visibleIds = listedItems.Select(item => item.SubOccId).ToHashSet();
+
+        foreach (var listedItem in listedItems)
+        {
+            var parentId = listedItem.HostOccId;
+            while (itemsById.TryGetValue(parentId, out var parent))
+            {
+                if (!visibleIds.Add(parent.SubOccId))
+                    break;
+
+                parentId = parent.HostOccId;
+            }
+        }
+
+        var lines = new List<string>();
+        void AppendChildren(int parentId, int indentation)
+        {
+            if (!itemsByParent.TryGetValue(parentId, out var children))
+                return;
+
+            foreach (var child in children.Where(item => visibleIds.Contains(item.SubOccId)))
+            {
+                lines.Add($"{new string(' ', indentation * 2)}- {FormatTreeItem(child)}");
+                AppendChildren(child.SubOccId, indentation + 1);
+            }
+        }
+
+        AppendChildren(rootHostId, 0);
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static bool IsOwnershipConflictMessage(string? message)
@@ -209,26 +258,16 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
 
             var client = new dRofusClientFactory().Create(document);
 
-            var filterSelect = Filter.And(Filter.Eq("is_sub_occurrence", true));
-
-            if (args.SubFilter != null && args.SubFilter.Any())
-            {
-                filterSelect = Filter.And(
-                    Filter.Eq("is_sub_occurrence", true),
-                    Filter.In("article_sub_category_id_name", args.SubFilter.ToArray())
-                );
-            }
-
-            var selectFields = new[] { "Id", "article_id_number", "article_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostData1, args.ParamHostData2, "parent_occurrence_id_classification_number", args.ParamHostData3, args.ParamHostData4, args.ParamHostData5 }
+            var selectFields = new[] { "Id", "article_id_number", "article_id_name", "article_sub_category_id_name", "parent_occurrence_id_id", args.ParamHostOccModelName, "parent_occurrence_id_article_id_name", args.ParamHostData1, args.ParamHostData2, "parent_occurrence_id_classification_number", args.ParamHostData3, args.ParamHostData4, args.ParamHostData5 }
                 .Where(f => !string.IsNullOrWhiteSpace(f)).ToArray();
             var querySubs = Query.List()
                 .Select(selectFields)
-                .Filter(filterSelect);
+                .Filter(Filter.And(Filter.Eq("is_sub_occurrence", true)));
                 
 
-            var allOccurrences = client.GetOccurrences(querySubs);
-            progressUI.AppendLog($"Fetched {allOccurrences.Count()} occurrences.");
-            if (allOccurrences.Count() == 0)
+            var allOccurrences = client.GetOccurrences(querySubs).ToList();
+            progressUI.AppendLog($"Fetched {allOccurrences.Count} occurrences.");
+            if (allOccurrences.Count == 0)
             {
                 progressUI.AppendLog("No results found in dRofus, check the filter");
                 return Result.Text.Failed("Check filter");
@@ -243,6 +282,7 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 SubIdNumber = occ.AdditionalProperties?.GetValueOrDefault("article_id_number")?.ToString(),
                 SubItemName = occ.AdditionalProperties?.GetValueOrDefault("article_id_name")?.ToString(),
                 HostOccId = int.TryParse(occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_id")?.ToString(), out var hostId) ? hostId : 0,
+                SubCategoryName = occ.AdditionalProperties?.GetValueOrDefault("article_sub_category_id_name")?.ToString(),
                 HostOccModname = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostOccModelName)?.ToString(),
                 HostItemName = occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_article_id_name")?.ToString(),
                 HostData1 = occ.AdditionalProperties?.GetValueOrDefault(args.ParamHostData1)?.ToString(),
@@ -253,21 +293,81 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                 HostOccTag = occ.AdditionalProperties?.GetValueOrDefault("parent_occurrence_id_classification_number")?.ToString()
             }).ToList();
 
-            // Now use the exact same syntax as the original commented code
-            var hostsInDrofus = subsInDrofus.GroupBy(o => o.HostOccId).Select(group => new DrofusHost
+            var occurrencesById = subsInDrofus.ToDictionary(occurrence => occurrence.SubOccId);
+            int unresolvedHierarchyCount = 0;
+            foreach (var occurrence in subsInDrofus)
             {
-                HostOccID = group.Key,
-                HostItemName = group.First().HostItemName,
-                HostData1 = group.First().HostData1?.ToString(),
-                HostData2 = group.First().HostData2?.ToString(),
-                HostData3 = group.First().HostData3?.ToString(),
-                HostData4 = group.First().HostData4?.ToString(),
-                HostData5 = group.First().HostData5?.ToString(),
-                HostOccTag = group.First().HostOccTag,
-                HostOccModname = group.First().HostOccModname?.ToString(),
-                RevitModname = group.First().RevitModname,
-                SubItems = group.ToList()
+                int parentId = occurrence.HostOccId;
+                int depth = 1;
+                var visitedIds = new HashSet<int> { occurrence.SubOccId };
+
+                while (occurrencesById.TryGetValue(parentId, out var parentOccurrence))
+                {
+                    if (!visitedIds.Add(parentOccurrence.SubOccId))
+                    {
+                        parentId = 0;
+                        break;
+                    }
+
+                    parentId = parentOccurrence.HostOccId;
+                    depth++;
+                }
+
+                if (parentId <= 0)
+                {
+                    unresolvedHierarchyCount++;
+                    continue;
+                }
+
+                occurrence.RootHostOccId = parentId;
+                occurrence.Depth = depth;
+            }
+
+            if (unresolvedHierarchyCount > 0)
+                progressUI.AppendLog($"Warning: Could not resolve the parent chain for {unresolvedHierarchyCount} dRofus subitems; they will be skipped.");
+
+            subsInDrofus = subsInDrofus.Where(occurrence => occurrence.RootHostOccId > 0).ToList();
+            var selectedSubCategories = args.SubFilter == null
+                ? new HashSet<string>()
+                : new HashSet<string>(args.SubFilter, StringComparer.OrdinalIgnoreCase);
+            var listedSubItems = selectedSubCategories.Count == 0
+                ? subsInDrofus
+                : subsInDrofus.Where(occurrence => selectedSubCategories.Contains(occurrence.SubCategoryName ?? string.Empty)).ToList();
+
+            if (listedSubItems.Count == 0)
+            {
+                progressUI.AppendLog("No results found in dRofus, check the filter");
+                return Result.Text.Failed("Check filter");
+            }
+
+            var allSubItemsByRoot = subsInDrofus.GroupBy(occurrence => occurrence.RootHostOccId)
+                .ToDictionary(group => group.Key, group => group.ToList());
+            var hostsInDrofus = listedSubItems.GroupBy(occurrence => occurrence.RootHostOccId).Select(group =>
+            {
+                var allHostSubItems = allSubItemsByRoot[group.Key];
+                var directSubItem = allHostSubItems.FirstOrDefault(occurrence => occurrence.Depth == 1);
+                var listedHostSubItems = group.ToList();
+                return new DrofusHost
+                {
+                    HostOccID = group.Key,
+                    HostItemName = directSubItem?.HostItemName,
+                    HostData1 = directSubItem?.HostData1,
+                    HostData2 = directSubItem?.HostData2,
+                    HostData3 = directSubItem?.HostData3,
+                    HostData4 = directSubItem?.HostData4,
+                    HostData5 = directSubItem?.HostData5,
+                    HostOccTag = directSubItem?.HostOccTag,
+                    HostOccModname = directSubItem?.HostOccModname,
+                    SubItems = listedHostSubItems,
+                    SubItems2 = string.Join(" | ", listedHostSubItems.Where(item => item.Depth == 2).Select(item => FormatNestedSubItem(item, directSubItem?.HostItemName))),
+                    SubItems3 = string.Join(" | ", listedHostSubItems.Where(item => item.Depth == 3).Select(item => FormatNestedSubItem(item, directSubItem?.HostItemName))),
+                    SubItemTree = BuildSubItemTree(group.Key, allHostSubItems, listedHostSubItems)
+                };
             }).ToList();
+
+            int subItemsBeyondSupportedDepth = listedSubItems.Count(item => item.Depth > 3);
+            if (subItemsBeyondSupportedDepth > 0)
+                progressUI.AppendLog($"Warning: {subItemsBeyondSupportedDepth} matching subitems are deeper than the supported automation depth of 3; they appear in InfoNode_tree but not in InfoNode_subs, InfoNode_subs2, or InfoNode_subs3.");
 
             progressUI.AppendLog("Collecting instances from linked models...");
             var instancesInRevit = Revit.CollectAllInstancesFromLinkedModels(document, args.OccurrenceIdParameterNames, args.IncludeLocalModel);
@@ -302,6 +402,9 @@ public class InfoNodeHandlerCommand : IRevitExtension<AssistantArgs>
                         Tag = matchingHost.HostOccTag,
                         Modname = string.IsNullOrWhiteSpace(matchingHost.HostOccModname) ? matchingHost.RevitModname : matchingHost.HostOccModname,
                         SubItems = matchingHost.SubItems,
+                        SubItems2 = matchingHost.SubItems2,
+                        SubItems3 = matchingHost.SubItems3,
+                        SubItemTree = matchingHost.SubItemTree,
                     });
                 }
             }

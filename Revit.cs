@@ -276,7 +276,9 @@ public class Revit
         public ActualHostStatus Status { get; set; }
 
         public List<DrofusOccurrence>? SubItems { get; set; }
-        
+        public string SubItems2 { get; set; } = string.Empty;
+        public string SubItems3 { get; set; } = string.Empty;
+        public string SubItemTree { get; set; } = string.Empty;
 
     }
 
@@ -306,7 +308,10 @@ public class Revit
             return idParam != null && idParam.AsString() == host.DrofusOccurrenceId.ToString();
         });
 
-        string subItemSummary = host.SubItems != null ? string.Join(" | ", host.SubItems.Select(s => $"{s.SubOccId},{s.SubItemName}({s.SubIdNumber})")) : string.Empty;
+        var subItems = host.SubItems ?? new List<DrofusOccurrence>();
+        string subItemSummary = string.Join(" | ", subItems
+            .Where(s => s.Depth == 1)
+            .Select(s => $"{s.SubOccId},{s.SubItemName}({s.SubIdNumber})"));
 
         
 
@@ -342,6 +347,9 @@ public class Revit
                     SetStringParam(existingInstance, "InfoNode_hosttag", host.Tag ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_modname", host.Modname ?? "No data");
                     SetStringParam(existingInstance, "InfoNode_subs", subItemSummary);
+                    SetStringParam(existingInstance, "InfoNode_subs2", host.SubItems2);
+                    SetStringParam(existingInstance, "InfoNode_subs3", host.SubItems3);
+                    SetStringParam(existingInstance, "InfoNode_tree", host.SubItemTree);
                     
                     // Update phase if specified
                     if (!string.IsNullOrWhiteSpace(phaseName))
@@ -396,6 +404,9 @@ public class Revit
             SetStringParam(newInstance, "InfoNode_hosttag", host.Tag ?? "No data");
             SetStringParam(newInstance, "InfoNode_modname", host.Modname ?? "No data");
             SetStringParam(newInstance, "InfoNode_subs", subItemSummary);
+            SetStringParam(newInstance, "InfoNode_subs2", host.SubItems2);
+            SetStringParam(newInstance, "InfoNode_subs3", host.SubItems3);
+            SetStringParam(newInstance, "InfoNode_tree", host.SubItemTree);
             
             // Set phase if specified
             if (!string.IsNullOrWhiteSpace(phaseName) && phaseName != "[]")

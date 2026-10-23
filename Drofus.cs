@@ -6,6 +6,9 @@ public class DrofusOccurrence
     public string? SubIdNumber { get; set; }
     public string? SubItemName { get; set; }
     public int HostOccId { get; set; }
+    public int RootHostOccId { get; set; }
+    public int Depth { get; set; }
+    public string? SubCategoryName { get; set; }
     public string? HostOccModname { get; set; }
     public string? RevitModname { get; set; }
     public string? HostItemName { get; set; }
@@ -30,4 +33,7 @@ public class DrofusHost
     public string? HostOccModname { get; set; }
     public string? RevitModname { get; set; }
     public List<DrofusOccurrence> SubItems { get; set; } = new();
+    public string SubItems2 { get; set; } = string.Empty;
+    public string SubItems3 { get; set; } = string.Empty;
+    public string SubItemTree { get; set; } = string.Empty;
 }

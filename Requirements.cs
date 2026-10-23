@@ -119,7 +119,10 @@ public class Requirements
             "InfoNode_hostname",
             "InfoNode_hosttag",
             "InfoNode_modname",
-            "InfoNode_subs"
+            "InfoNode_subs",
+            "InfoNode_subs2",
+            "InfoNode_subs3",
+            "InfoNode_tree"
         };
 
             // Get the InfoNode family

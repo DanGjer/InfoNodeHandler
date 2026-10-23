@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Attach to Revit 2025",
+            "name": "Attach to Revit 2026",
             "type": "coreclr",
             "request": "attach",
             "processName": "Revit",
